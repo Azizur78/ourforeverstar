@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Replace https://example.com with the production domain before launch. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/</loc></url>
+  <url><loc>https://example.com/celestial-gifting</loc></url>
+  <url><loc>https://example.com/about</loc></url>
+  <url><loc>https://example.com/how-it-works</loc></url>
+  <url><loc>https://example.com/faq</loc></url>
+  <url><loc>https://example.com/contact</loc></url>
+  <url><loc>https://example.com/verify</loc></url>
+</urlset>

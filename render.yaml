@@ -1,0 +1,31 @@
+# Render Blueprint for the ourforeverstar STAGING service (Free plan). No secret values live in this file.
+# Secret files cannot be declared here: add staging_seed.json under Environment > Secret Files (see README).
+services:
+  - type: web
+    name: ourforeverstar-staging
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: false            # deploy only when you trigger it
+    envVars:
+      - key: APP_ENV
+        value: production        # Secure cookies, API docs off (Render terminates HTTPS)
+      - key: SECRET_KEY
+        generateValue: true      # random, created once by Render
+      - key: ADMIN_USERNAME
+        sync: false              # paste from staging-bundle/ADMIN_USERNAME.txt
+      - key: ADMIN_PASSWORD_HASH
+        sync: false              # paste from staging-bundle/ADMIN_PASSWORD_HASH.txt
+      - key: INSTAGRAM_URL
+        sync: false              # public URL; baked into the frontend at build time
+      - key: STAGING_SEED_FILE
+        value: /etc/secrets/staging_seed.json
+      - key: TRUST_PROXY
+        value: "true"
+      - key: CLIENT_IP_HEADER
+        value: CF-Connecting-IP  # Cloudflare overwrites it, so visitors cannot spoof their rate-limit identity
+      - key: NOINDEX
+        value: "true"            # keep staging out of search engines
+      - key: MAX_CERTIFICATE_MB
+        value: "5"

@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin
+Disallow: /registry/
+Disallow: /api/
+
+# Replace with the production domain when known:
+# Sitemap: https://example.com/sitemap.xml

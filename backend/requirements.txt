@@ -1,0 +1,7 @@
+# Production dependencies, pinned to the versions the test suite and browser suites were run against.
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+python-dotenv==1.2.4
+cryptography==50.0.2
+openpyxl==3.1.5

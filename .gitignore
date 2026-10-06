@@ -1,0 +1,37 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# data & uploads (customer data must never be committed)
+backend/data/
+backend/uploads/*
+!backend/uploads/.gitkeep
+*.db
+*.db-shm
+*.db-wal
+
+# real customer source files for the one-time import
+scripts/*.csv
+scripts/*.xlsx
+*.xlsx
+*.csv
+
+# node
+node_modules/
+frontend/dist/
+
+# editor / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Render staging bundle: contains the admin hash and registry codes. Never commit.
+staging-bundle/
