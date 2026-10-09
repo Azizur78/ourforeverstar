@@ -1,5 +1,5 @@
 import { VerifyLink } from '../components/VerifyModal'
-import { CtaBand, Disclaimer, InstagramLink, PageHero, Section } from '../components/Ui'
+import { CtaBand, Disclaimer, InstagramLink, PageHero, RecognitionPanel, Section } from '../components/Ui'
 import { useMeta } from '../lib/meta'
 
 const OCCASIONS = ['Anniversary', 'Birthday', 'Wedding', 'Engagement', 'Memorial', 'A special relationship', 'A personal milestone', 'A meaningful gift']
@@ -7,22 +7,22 @@ const OCCASIONS = ['Anniversary', 'Birthday', 'Wedding', 'Engagement', 'Memorial
 export default function Gifting() {
   useMeta({
     title: 'Celestial Gifting',
-    description: 'Learn what an ourforeverstar dedication is, who it is for, and the occasions that make a star dedication a meaningful gift.',
+    description: 'Learn what a dedication with Our Forever Star is, who it is for, and the occasions that make a star dedication a meaningful gift.',
   })
   return (
     <>
       <PageHero eyebrow="Celestial gifting" title="A gift as lasting as the feeling behind it">
-        An ourforeverstar dedication is a symbolic gift: a star, a name and a message, kept together in your own registry.
+        A star dedication is a symbolic gift: a star, a name and a message, kept together in a registry of your own.
       </PageHero>
 
-      <Section narrow title="What is ourforeverstar?">
+      <Section narrow title="What is Our Forever Star?">
         <p className="prose">
-          ourforeverstar is a celestial gifting experience. When you dedicate a star, we record your dedication in the
-          ourforeverstar registry alongside details of the star, such as its catalogue reference and constellation, and
+          Our Forever Star is a celestial gifting experience. When you dedicate a star, we record your dedication in the
+          Our Forever Star registry alongside details of the star, such as its catalogue reference and constellation, and
           prepare a certificate to mark the moment.
         </p>
         <p className="prose">
-          It is a symbolic gift. A dedication does not give legal or physical ownership of a star: it is a beautiful,
+          It is a symbolic gift. A dedication does not give legal or physical ownership of a star: it is a graceful,
           personal way to connect someone you love with the night sky.
         </p>
       </Section>
@@ -35,7 +35,7 @@ export default function Gifting() {
       </Section>
 
       <Section title="Who can receive one?">
-        <p className="prose">Anyone you want to honour. Popular moments include:</p>
+        <p className="prose">One person, or two: a star may be dedicated to a couple just as naturally. Cherished moments include:</p>
         <ul className="chips">
           {OCCASIONS.map((o) => <li key={o}>{o}</li>)}
         </ul>
@@ -43,12 +43,14 @@ export default function Gifting() {
 
       <Section narrow title="What the recipient receives">
         <ul className="check-list">
-          <li>A dedication recorded in the ourforeverstar registry, with your own message.</li>
+          <li>A dedication recorded in the Our Forever Star registry, with a message in your own words.</li>
           <li>Star details such as catalogue reference, constellation and distance.</li>
           <li>A certificate of the dedication.</li>
           <li>A Registry Number and Registry Code to <VerifyLink className="text-link">verify and revisit the registry</VerifyLink> at any time.</li>
         </ul>
       </Section>
+
+      <RecognitionPanel />
 
       <CtaBand title="Begin a dedication" actions={<InstagramLink>Dedicate a Star</InstagramLink>}>
         Message us on Instagram with who the star is for and the words you would like to say.

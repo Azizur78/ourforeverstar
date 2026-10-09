@@ -6,11 +6,16 @@ SameSite session cookies require.
 """
 from __future__ import annotations
 
+import mimetypes
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+
+# Minimal container images ship without a font MIME table; register the web-font types explicitly.
+mimetypes.add_type("font/woff2", ".woff2")
+mimetypes.add_type("font/woff", ".woff")
 
 
 def mount_frontend(app: FastAPI, dist: Path, noindex: bool) -> None:

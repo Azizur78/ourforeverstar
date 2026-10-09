@@ -4,12 +4,16 @@ import { CtaBand, InstagramLink, PageHero } from '../components/Ui'
 import { useMeta } from '../lib/meta'
 
 const FAQS = [
-  ['What is ourforeverstar?',
-    'ourforeverstar is a symbolic celestial gift. We record your dedication in the ourforeverstar registry together with details of a star and prepare a certificate. It does not confer legal or physical ownership of a star.'],
+  ['What is Our Forever Star?',
+    'Our Forever Star is a symbolic celestial gift. We record your dedication in the Our Forever Star registry together with details of a star and prepare a certificate. It does not confer legal or physical ownership of a star.'],
   ['How do I dedicate a star?',
     'Message us on Instagram with who the star is for, the occasion and the words you would like included. We will guide you from there.'],
+  ['Is a dedication recognised by NASA, the IAU or any government?',
+    'No. A dedication is recognised within the Our Forever Star registry only. It is a personal, symbolic keepsake, not an official designation by NASA, the IAU or any government.'],
+  ['Why are orders taken on Instagram?',
+    'We want to build a relationship with every person who places an order, so each one begins as a personal conversation. Every member of the Our Forever Star family is important to us.'],
   ['How do I access my registry?',
-    <>Open the ourforeverstar website, choose <VerifyLink className="text-link">Verify Registry</VerifyLink> and enter your Registry Number and Registry Code. QR codes and NFC cards take you to the main website, from where you verify in the same way.</>],
+    <>Open the Our Forever Star website, choose <VerifyLink className="text-link">Verify Registry</VerifyLink> and enter your Registry Number and Registry Code. QR codes and NFC cards take you to the main website, from where you verify in the same way.</>],
   ['Where can I find my Registry Number?',
     'Your Registry Number is provided to you with your dedication. It looks like HIP-2026-000401. If you cannot find it, contact us on Instagram.'],
   ['Where can I find my Registry Code?',
@@ -27,7 +31,7 @@ const FAQS = [
 export default function Faq() {
   useMeta({
     title: 'FAQ',
-    description: 'Answers about ourforeverstar dedications, finding your Registry Number and Code, verifying your registry and your certificate.',
+    description: 'Answers about star dedications with Our Forever Star, finding your Registry Number and Code, verifying your registry and your certificate.',
   })
   return (
     <>

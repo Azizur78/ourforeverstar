@@ -1,7 +1,33 @@
+// The real customer journey. Orders and conversations happen on Instagram; the website never takes payment.
 export const STEPS = [
-  { title: 'Choose your dedication', body: 'Decide who the star is for and what the moment means: an anniversary, a birthday, a wedding, a memory.' },
-  { title: 'Share the details through Instagram', body: 'Message us on Instagram with the names, the date and the words you would like in the dedication.' },
-  { title: 'ourforeverstar prepares your registry', body: 'We record your dedication in the ourforeverstar registry and prepare your star details and certificate.' },
-  { title: 'Receive your registry and certificate', body: 'You receive your Registry Number and Registry Code, along with your certificate.' },
-  { title: 'Verify and revisit your star anytime', body: 'Visit the ourforeverstar website, choose Verify Registry and enter your Registry Number and Registry Code to view your dedication whenever you like.' },
+  {
+    title: 'Choose your star',
+    short: 'Choose your star',
+    body: 'Decide who the star is for and the moment it will honour: an anniversary, a birthday, a wedding, a remembrance.',
+  },
+  {
+    title: 'Connect with us on Instagram',
+    short: 'Connect on Instagram',
+    body: 'Message our team on Instagram. Every dedication begins as a personal conversation, so we come to know each customer.',
+  },
+  {
+    title: 'We prepare your registry',
+    short: 'We prepare your registry',
+    body: 'We record your dedication and prepare your star details and certificate with care.',
+  },
+  {
+    title: 'Receive your digital registry',
+    short: 'Receive your digital registry',
+    body: 'Your digital registry is sent to you by email, with the Registry Number and Registry Code you will use to open it.',
+  },
+  {
+    title: 'Receive your chosen package',
+    short: 'Receive your package',
+    body: 'Your selected package follows, delivered as arranged with our team.',
+  },
+  {
+    title: 'Revisit your star, anytime',
+    short: 'Revisit your star',
+    body: 'Return whenever you wish: choose Verify Registry on our website and enter your Registry Number and Registry Code.',
+  },
 ]

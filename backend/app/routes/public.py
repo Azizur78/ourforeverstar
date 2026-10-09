@@ -72,6 +72,19 @@ def get_registry(
     return to_public(_active_registry_for(request, public_id, repo, settings), vault)
 
 
+@router.get("/{public_id}/registry-document")
+def get_registry_document(
+    public_id: str,
+    request: Request,
+    download: bool = False,
+    repo: RegistryRepository = Depends(get_repo),
+    settings: Settings = Depends(get_settings),
+    storage: CertificateStorage = Depends(get_storage),
+):
+    row = _active_registry_for(request, public_id, repo, settings)
+    return certificate_response(row, storage, download, kind="registry_document")
+
+
 @router.get("/{public_id}/certificate")
 def get_certificate(
     public_id: str,

@@ -144,6 +144,14 @@ def test_spa_and_assets_are_served_from_the_same_origin(settings, dist):
     assert "Allow: /" in c.get("/robots.txt").text
 
 
+def test_self_hosted_fonts_are_served_with_font_mime_types(settings, dist):
+    (dist / "assets" / "playfair-latin-400-normal-abc123.woff2").write_bytes(b"wOF2" + b"\0" * 16)
+    (dist / "assets" / "playfair-latin-400-normal-abc123.woff").write_bytes(b"wOFF" + b"\0" * 16)
+    c = TestClient(create_app(replace(settings, frontend_dist=dist)))
+    assert c.get("/assets/playfair-latin-400-normal-abc123.woff2").headers["content-type"] == "font/woff2"
+    assert c.get("/assets/playfair-latin-400-normal-abc123.woff").headers["content-type"] == "font/woff"
+
+
 def test_api_still_wins_and_unknown_api_paths_are_json_404(settings, dist):
     c = TestClient(create_app(replace(settings, frontend_dist=dist)))
     assert c.get("/api/health").json() == {"status": "ok"}

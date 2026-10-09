@@ -6,7 +6,7 @@ import { useMeta } from '../lib/meta'
 export default function Contact() {
   useMeta({
     title: 'Contact',
-    description: 'Contact ourforeverstar on Instagram to dedicate a star, ask a question or get help with your registry.',
+    description: 'Contact Our Forever Star on Instagram to dedicate a star, ask a question or get help with your registry.',
   })
   return (
     <>

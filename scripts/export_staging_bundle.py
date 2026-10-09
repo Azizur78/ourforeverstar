@@ -53,14 +53,18 @@ def main() -> int:
     for row in rows:
         rec = {k: row[k] for k in FIELDS}
         rec["registry_code"] = vault.decrypt(row["registry_code"])
-        rec["certificate"] = None
-        if row["certificate_path"]:
-            path = (settings.upload_dir / row["certificate_path"]).resolve()
+        for key, column, what in (("certificate", "certificate_path", "certificate"),
+                                  ("registry_document", "registry_document_path", "registry document")):
+            rec[key] = None
+            stored = row[column] if column in row.keys() else None
+            if not stored:
+                continue
+            path = (settings.upload_dir / stored).resolve()
             if path.is_file() and path.is_relative_to(settings.upload_dir.resolve()):
-                rec["certificate"] = {"filename": path.name, "content_base64": base64.b64encode(path.read_bytes()).decode()}
+                rec[key] = {"filename": path.name, "content_base64": base64.b64encode(path.read_bytes()).decode()}
                 certs += 1
             else:
-                print(f"WARNING: certificate file for {row['registry_number']} is missing locally; exporting without it.")
+                print(f"WARNING: {what} file for {row['registry_number']} is missing locally; exporting without it.")
         records.append(rec)
 
     # The hash the owner will use: the one set through the Admin UI if there is one, else the .env value.
@@ -77,7 +81,7 @@ def main() -> int:
     (OUT / "ADMIN_PASSWORD_HASH.txt").write_text(admin_hash, encoding="utf-8")
 
     by_status = {s: sum(1 for r in records if r["status"] == s) for s in ("active", "inactive")}
-    print(f"Exported {len(records)} registry record(s) {by_status} with {certs} certificate file(s).")
+    print(f"Exported {len(records)} registry record(s) {by_status} with {certs} uploaded file(s) (certificates / registry documents).")
     print(f"Admin credential source: {'database (changed in the Admin UI)' if cred else '.env'} - value not shown.")
     print(f"Bundle written to: {OUT}")
     for f in sorted(OUT.iterdir()):

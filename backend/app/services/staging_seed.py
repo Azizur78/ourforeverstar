@@ -68,6 +68,7 @@ def apply_staging_seed(settings: Settings, vault: CodeVault, storage: Certificat
                 raise SeedError(f"Seed record #{index} is not an object.")
             item = dict(item)
             cert = item.pop("certificate", None)
+            document = item.pop("registry_document", None)
             try:
                 payload = RegistryWrite(**item)
             except (ValidationError, TypeError) as exc:
@@ -78,13 +79,16 @@ def apply_staging_seed(settings: Settings, vault: CodeVault, storage: Certificat
                 continue
             row = repo.create(to_storage(payload, vault))
             added += 1
-            if cert:
+            for entry, column, what in ((cert, "certificate_path", "certificate"),
+                                        (document, "registry_document_path", "registry document")):
+                if not entry:
+                    continue
                 try:
-                    content = base64.b64decode(cert["content_base64"], validate=True)
-                    extension = validate_certificate(cert["filename"], content, settings.max_certificate_bytes)
+                    content = base64.b64decode(entry["content_base64"], validate=True)
+                    extension = validate_certificate(entry["filename"], content, settings.max_certificate_bytes)
                 except (KeyError, TypeError, binascii.Error, ValueError, InvalidCertificate):
-                    raise SeedError(f"Seed record #{index} has an invalid certificate.") from None
-                repo.update(row["id"], {"certificate_path": storage.save(extension, content)})
+                    raise SeedError(f"Seed record #{index} has an invalid {what}.") from None
+                repo.update(row["id"], {column: storage.save(extension, content)})
     finally:
         conn.close()
     log.warning("Staging seed applied: %d record(s) added, %d already present.", added, skipped)

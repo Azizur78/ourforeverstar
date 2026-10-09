@@ -9,7 +9,7 @@ from typing import Any
 UPDATABLE = (
     "registry_number", "registry_code", "registry_code_hash", "dedicated_to", "dedicated_by",
     "dedication_date", "occasion", "star_catalogue", "constellation", "distance",
-    "dedication_message", "certificate_path", "status",
+    "dedication_message", "certificate_path", "registry_document_path", "status",
 )
 
 
@@ -29,20 +29,30 @@ class RegistryRepository:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
 
-    def create(self, data: dict[str, Any]) -> dict[str, Any]:
-        now = _now()
+    def _insert(self, data: dict[str, Any], now: str) -> int:
         row = {**data, "public_id": secrets.token_urlsafe(12), "created_at": now, "updated_at": now}
         cols = ", ".join(row)
         marks = ", ".join(f":{k}" for k in row)
+        return self.conn.execute(f"INSERT INTO registries ({cols}) VALUES ({marks})", row).lastrowid  # type: ignore[return-value]
+
+    def create(self, data: dict[str, Any]) -> dict[str, Any]:
+        return self.create_many([data])[0]
+
+    def create_many(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Insert all rows in ONE transaction: either every record is created or none is."""
+        now = _now()
         try:
-            cur = self.conn.execute(f"INSERT INTO registries ({cols}) VALUES ({marks})", row)
+            ids = [self._insert(data, now) for data in rows]
             self.conn.commit()
         except sqlite3.IntegrityError as exc:
             self.conn.rollback()
             if "registry_number" in str(exc):
                 raise DuplicateRegistryNumber() from exc
             raise
-        return self.get(cur.lastrowid)  # type: ignore[return-value]
+        except Exception:
+            self.conn.rollback()
+            raise
+        return [self.get(i) for i in ids]  # type: ignore[misc]
 
     def update(self, registry_id: int, fields: dict[str, Any]) -> dict[str, Any] | None:
         fields = {k: v for k, v in fields.items() if k in UPDATABLE}

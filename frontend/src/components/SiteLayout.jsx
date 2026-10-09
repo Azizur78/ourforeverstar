@@ -15,6 +15,10 @@ const NAV = [
   ['/contact', 'Contact'],
 ]
 
+// Footer groups reuse the existing routes; no new pages.
+const EXPLORE = NAV.filter(([to]) => ['/', '/celestial-gifting', '/about', '/how-it-works'].includes(to))
+const SUPPORT = NAV.filter(([to]) => ['/faq', '/contact'].includes(to))
+
 function Logo() {
   return (
     <Link to="/" className="logo" aria-label={`${SITE_NAME}, home`}>
@@ -59,25 +63,33 @@ export default function SiteLayout() {
 
       <footer className="site-footer">
         <div className="container footer-grid">
-          <div>
+          <div className="footer-brand">
             <Logo />
             <p className="muted">Some connections are written in the stars.</p>
           </div>
-          <nav aria-label="Footer">
+          <nav aria-labelledby="footer-explore">
+            <h2 id="footer-explore" className="footer-heading">Explore</h2>
             <ul className="footer-links">
-              {NAV.slice(1).map(([to, label]) => <li key={to}><Link to={to}>{label}</Link></li>)}
+              {EXPLORE.map(([to, label]) => <li key={to}><Link to={to}>{label}</Link></li>)}
+            </ul>
+          </nav>
+          <nav aria-labelledby="footer-support">
+            <h2 id="footer-support" className="footer-heading">Support</h2>
+            <ul className="footer-links">
+              {SUPPORT.map(([to, label]) => <li key={to}><Link to={to}>{label}</Link></li>)}
               <li><VerifyLink>Verify Registry</VerifyLink></li>
             </ul>
           </nav>
-          <div>
+          <div className="footer-connect">
+            <h2 className="footer-heading">Connect</h2>
             <p className="muted">Orders and enquiries are handled through Instagram.</p>
             <InstagramLink className="btn btn-ghost btn-sm">Message us on Instagram</InstagramLink>
           </div>
         </div>
         <div className="container">
           <p className="legal">
-            A star dedication is a symbolic gift recorded in the ourforeverstar registry. It does not confer legal or
-            physical ownership of any star or celestial body. &copy; {new Date().getFullYear()} ourforeverstar.
+            A star dedication is a symbolic gift recorded in the Our Forever Star registry. It does not confer legal or
+            physical ownership of any star or celestial body. &copy; {new Date().getFullYear()} {SITE_NAME}.
           </p>
         </div>
       </footer>

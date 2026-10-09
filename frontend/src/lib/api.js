@@ -49,6 +49,8 @@ export const api = {
   registry: (publicId) => request(`/api/registries/${encodeURIComponent(publicId)}`),
   certificateUrl: (publicId, download = false) =>
     `/api/registries/${encodeURIComponent(publicId)}/certificate${download ? '?download=1' : ''}`,
+  registryDocumentUrl: (publicId, download = false) =>
+    `/api/registries/${encodeURIComponent(publicId)}/registry-document${download ? '?download=1' : ''}`,
 
   admin: {
     login: (username, password) => request('/api/admin/login', { method: 'POST', json: { username, password } }),
@@ -61,7 +63,17 @@ export const api = {
     stats: () => request('/api/admin/stats'),
     list: (params) => request(`/api/admin/registries${qs(params)}`),
     get: (id) => request(`/api/admin/registries/${id}`),
-    create: (data) => request('/api/admin/registries', { method: 'POST', json: data }),
+    // One request creates every record (with its optional certificate and registry document) or none.
+    // certificates / registryDocuments: [{index, file}]
+    createBatch: (records, certificates = [], registryDocuments = []) => {
+      const form = new FormData()
+      form.append('records', JSON.stringify(records))
+      form.append('certificate_indexes', JSON.stringify(certificates.map((c) => c.index)))
+      certificates.forEach((c) => form.append('certificates', c.file))
+      form.append('registry_document_indexes', JSON.stringify(registryDocuments.map((c) => c.index)))
+      registryDocuments.forEach((c) => form.append('registry_documents', c.file))
+      return request('/api/admin/registries/batch', { method: 'POST', body: form })
+    },
     update: (id, data) => request(`/api/admin/registries/${id}`, { method: 'PUT', json: data }),
     setStatus: (id, status) => request(`/api/admin/registries/${id}/status`, { method: 'PATCH', json: { status } }),
     uploadCertificate: (id, file) => {
@@ -69,6 +81,13 @@ export const api = {
       form.append('file', file)
       return request(`/api/admin/registries/${id}/certificate`, { method: 'POST', body: form })
     },
+    uploadRegistryDocument: (id, file) => {
+      const form = new FormData()
+      form.append('file', file)
+      return request(`/api/admin/registries/${id}/registry-document`, { method: 'POST', body: form })
+    },
+    registryDocumentUrl: (id, download = false) =>
+      `/api/admin/registries/${id}/registry-document${download ? '?download=1' : ''}`,
     certificateUrl: (id, download = false) =>
       `/api/admin/registries/${id}/certificate${download ? '?download=1' : ''}`,
   },

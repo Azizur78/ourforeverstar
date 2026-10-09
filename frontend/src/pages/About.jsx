@@ -6,17 +6,17 @@ import { useMeta } from '../lib/meta'
 export default function About() {
   useMeta({
     title: 'Our Story',
-    description: 'The idea behind ourforeverstar: a quiet, meaningful way to dedicate a star to someone you love.',
+    description: 'The idea behind Our Forever Star: a quiet, meaningful way to dedicate a star to someone you love.',
   })
   return (
     <>
       <PageHero eyebrow="Our story" title="Because some things are too meaningful for words alone">
-        ourforeverstar began with a simple belief: the people who matter most deserve gifts that matter just as much.
+        Our Forever Star began with a simple belief: the people who matter most deserve gifts that matter just as much.
       </PageHero>
 
       <Section narrow>
         <p className="prose">
-          We created ourforeverstar to give people a thoughtful way to mark the moments that shape their lives:
+          We created Our Forever Star to give people a thoughtful way to mark the moments that shape their lives:
           the beginnings, the celebrations, and the goodbyes that stay with us.
         </p>
         <p className="prose">
@@ -24,7 +24,7 @@ export default function About() {
           and return to: a name, a message and a star that belongs to that moment.
         </p>
         <p className="prose">
-          We keep things simple and honest. An ourforeverstar dedication is a symbolic gift, and we are always clear
+          We keep things simple and honest. A star dedication is a symbolic gift, and we are always clear
           about what it is.
         </p>
       </Section>

@@ -93,6 +93,10 @@ bound to the password hash). Wrong-current-password attempts are rate limited. I
 `python scripts/reset_admin_password.py` (set a new one) or `--initial` (go back to the `.env` hash).
 `DELETE /api/admin/registries/{id}` deactivates; registries are never hard-deleted in V1.
 
+**Registry document.** Alongside the certificate, an admin can attach a registry document (PDF, PNG or JPG, same checks and storage as
+certificates) to each registry, in the Add form (per record) or the Edit form. A verified customer sees a "Registry" tab with View and
+Download buttons only when one exists. Existing databases gain the new `registry_document_path` column automatically at startup.
+
 **Certificates.** PDF, PNG or JPG, up to 5 MB. Validated by extension and file signature, saved under a server-generated
 name in `backend/uploads/certificates/`. Only the relative path is stored in SQLite. Files are not publicly served and
 are streamed only to a verified customer or an admin. Storage sits behind a small interface
@@ -100,10 +104,11 @@ are streamed only to a verified customer or an admin. Storage sits behind a smal
 
 ### API summary
 
-Public: `POST /api/registries/verify`, `GET /api/registries/{public_id}`, `GET /api/registries/{public_id}/certificate`.
+Public: `POST /api/registries/verify`, `GET /api/registries/{public_id}`, `GET /api/registries/{public_id}/certificate`,
+`GET /api/registries/{public_id}/registry-document`.
 Admin (session required): `POST /api/admin/login|logout`, `GET /api/admin/me|stats`,
 `GET|POST /api/admin/registries`, `GET|PUT|DELETE /api/admin/registries/{id}`, `PATCH .../status`,
-`POST|GET .../certificate`. Error bodies are `{"message": ...}` with optional `errors` / `field`; no stack traces.
+`POST|GET .../certificate`, `POST|GET .../registry-document`, `POST .../registries/batch`. Error bodies are `{"message": ...}` with optional `errors` / `field`; no stack traces.
 
 ## One-time migration of the existing ~40 customers
 

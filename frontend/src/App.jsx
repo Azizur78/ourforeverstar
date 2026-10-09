@@ -18,6 +18,7 @@ const ChangePassword = lazy(() => import('./admin/ChangePassword'))
 const Dashboard = lazy(() => import('./admin/Dashboard'))
 const RegistryList = lazy(() => import('./admin/RegistryList'))
 const RegistryForm = lazy(() => import('./admin/RegistryForm'))
+const RegistryBatchForm = lazy(() => import('./admin/RegistryBatchForm'))
 const RegistryDetail = lazy(() => import('./admin/RegistryDetail'))
 
 export default function App() {
@@ -42,7 +43,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="password" element={<ChangePassword />} />
           <Route path="registries" element={<RegistryList />} />
-          <Route path="registries/new" element={<RegistryForm />} />
+          <Route path="registries/new" element={<RegistryBatchForm />} />
           <Route path="registries/:id" element={<RegistryDetail />} />
           <Route path="registries/:id/edit" element={<RegistryForm />} />
         </Route>

@@ -18,8 +18,8 @@ def to_storage(payload: RegistryWrite, vault: CodeVault) -> dict[str, Any]:
     return data
 
 
-def _certificate_info(row: dict[str, Any]) -> dict[str, Any]:
-    path = row.get("certificate_path")
+def _file_info(row: dict[str, Any], column: str) -> dict[str, Any]:
+    path = row.get(column)
     content_type = CONTENT_TYPES.get(Path(path).suffix.lower()) if path else None
     return {"available": bool(path), "content_type": content_type}
 
@@ -39,7 +39,8 @@ def to_admin(row: dict[str, Any], vault: CodeVault) -> dict[str, Any]:
         "distance": row["distance"],
         "dedication_message": row["dedication_message"],
         "status": row["status"],
-        "certificate": _certificate_info(row),
+        "certificate": _file_info(row, "certificate_path"),
+        "registry_document": _file_info(row, "registry_document_path"),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -61,5 +62,6 @@ def to_public(row: dict[str, Any], vault: CodeVault) -> dict[str, Any]:
             "constellation": row["constellation"],
             "distance": row["distance"],
         },
-        "certificate": _certificate_info(row),
+        "certificate": _file_info(row, "certificate_path"),
+        "registry_document": _file_info(row, "registry_document_path"),
     }

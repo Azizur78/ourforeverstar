@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS registries (
     distance            TEXT,
     dedication_message  TEXT,
     certificate_path    TEXT,                     -- relative storage key, never file bytes
+    registry_document_path TEXT,                  -- optional uploaded registry document (same rules as the certificate)
     status              TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     created_at          TEXT NOT NULL,
     updated_at          TEXT NOT NULL
@@ -47,11 +48,19 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Additive, idempotent upgrades for databases created by earlier versions."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(registries)")}
+    if "registry_document_path" not in columns:
+        conn.execute("ALTER TABLE registries ADD COLUMN registry_document_path TEXT")
+
+
 def init_db(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = connect(db_path)
     try:
         conn.executescript(SCHEMA)
+        _migrate(conn)
         conn.commit()
     finally:
         conn.close()

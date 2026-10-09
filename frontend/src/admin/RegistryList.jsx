@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { formatDate } from '../lib/format'
 
@@ -7,6 +7,7 @@ const PAGE_SIZE = 20
 
 export default function RegistryList() {
   const [params, setParams] = useSearchParams()
+  const notice = useLocation().state?.notice
   const q = params.get('q') || ''
   const status = params.get('status') || ''
   const page = Number(params.get('page') || 1)
@@ -62,6 +63,7 @@ export default function RegistryList() {
         <h1 className="h2">Registries</h1>
         <Link to="/admin/registries/new" className="btn btn-primary">Add registry</Link>
       </div>
+      {notice && <p className="notice" role="status">{notice}</p>}
 
       <div className="toolbar">
         <div className="field grow">
