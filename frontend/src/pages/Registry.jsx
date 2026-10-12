@@ -47,8 +47,10 @@ export default function Registry() {
     <div className="container registry-wrap">
       <RegistryView
         registry={state.data}
-        certificateUrls={{ view: api.certificateUrl(publicId), download: api.certificateUrl(publicId, true) }}
-        documentUrls={{ view: api.registryDocumentUrl(publicId), download: api.registryDocumentUrl(publicId, true) }}
+        documentUrls={{
+          certificate: { view: api.certificateUrl(publicId), download: api.certificateUrl(publicId, true) },
+          registry_document: { view: api.registryDocumentUrl(publicId), download: api.registryDocumentUrl(publicId, true) },
+        }}
       />
       <p className="registry-footer">
         <VerifyLink className="text-link">Verify another registry</VerifyLink>

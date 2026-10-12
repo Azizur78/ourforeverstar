@@ -4,10 +4,12 @@ import { api } from '../lib/api'
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
+  const [recovery, setRecovery] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     api.admin.stats().then(setStats).catch((e) => setError(e.message))
+    api.admin.recovery.summary().then(setRecovery).catch(() => {})
   }, [])
 
   return (
@@ -21,6 +23,10 @@ export default function Dashboard() {
             <p className="stat-label">{label}</p>
           </div>
         ))}
+        <Link to="/admin/recovery?status=pending" className="card stat stat-link">
+          <p className="stat-value">{recovery ? recovery.pending : '–'}</p>
+          <p className="stat-label">Recovery requests waiting</p>
+        </Link>
       </div>
       <div className="actions">
         <Link to="/admin/registries/new" className="btn btn-primary">Add registry</Link>

@@ -102,6 +102,7 @@ export default function RegistryList() {
                   <th scope="col">Dedicated to</th>
                   <th scope="col">Dedicated by</th>
                   <th scope="col">Date</th>
+                  <th scope="col">Documents</th>
                   <th scope="col">Status</th>
                   <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
@@ -114,6 +115,16 @@ export default function RegistryList() {
                     <td data-label="Dedicated to">{r.dedicated_to}</td>
                     <td data-label="Dedicated by">{r.dedicated_by}</td>
                     <td data-label="Date">{formatDate(r.dedication_date)}</td>
+                    <td data-label="Documents">
+                      <span className={`doc-pill ${r.certificate?.available ? 'on' : ''}`} title="Star Dedication Certificate">
+                        Certificate <span aria-hidden="true">{r.certificate?.available ? '✓' : '–'}</span>
+                        <span className="sr-only">{r.certificate?.available ? 'uploaded' : 'not uploaded'}</span>
+                      </span>{' '}
+                      <span className={`doc-pill ${r.registry_document?.available ? 'on' : ''}`} title="Certificate of Celestial Registry">
+                        Registry <span aria-hidden="true">{r.registry_document?.available ? '✓' : '–'}</span>
+                        <span className="sr-only">{r.registry_document?.available ? 'uploaded' : 'not uploaded'}</span>
+                      </span>
+                    </td>
                     <td data-label="Status"><span className={`badge ${r.status}`}>{r.status}</span></td>
                     <td className="row-actions">
                       <Link to={`/admin/registries/${r.id}`} className="btn btn-ghost btn-sm">View</Link>

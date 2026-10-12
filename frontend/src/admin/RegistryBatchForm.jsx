@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import RegistryFields, { CERT_ACCEPT, EMPTY_REGISTRY, Field, certificateError } from './RegistryFields'
+import RegistryFields, { CERT_ACCEPT, DOC_LABELS, EMPTY_REGISTRY, Field, certificateError } from './RegistryFields'
 import { MESSAGES, normalizeNumber, validateBatch, validateRecord } from './registryValidation'
 
 let keySeed = 0
@@ -202,8 +202,8 @@ export default function RegistryBatchForm() {
               onChange={(name, value) => setValue(record.key, name, value)}
               onBlurNumber={() => checkNumber(record.key)}
               certificate={(
-                <Field id={`${prefix}certificate`} label="Certificate" error={certError}
-                  hint="PDF, PNG or JPG, up to 5 MB. Optional. Applies to this record only.">
+                <Field id={`${prefix}certificate`} label={DOC_LABELS.certificate} error={certError}
+                  hint="PDF only, up to 5 MB. Optional. Applies to this record only.">
                   <input id={`${prefix}certificate`} type="file" accept={CERT_ACCEPT}
                     onChange={(e) => setFile(record.key, e.target.files?.[0] || null)}
                     aria-invalid={certError ? true : undefined}
@@ -211,8 +211,8 @@ export default function RegistryBatchForm() {
                 </Field>
               )}
               registryDocument={(
-                <Field id={`${prefix}registry_document`} label="Registry document" error={docError}
-                  hint="PDF, PNG or JPG, up to 5 MB. Optional. Applies to this record only.">
+                <Field id={`${prefix}registry_document`} label={DOC_LABELS.registry_document} error={docError}
+                  hint="PDF only, up to 5 MB. Optional. Applies to this record only.">
                   <input id={`${prefix}registry_document`} type="file" accept={CERT_ACCEPT}
                     onChange={(e) => setDoc(record.key, e.target.files?.[0] || null)}
                     aria-invalid={docError ? true : undefined}

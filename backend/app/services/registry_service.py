@@ -8,6 +8,18 @@ from ..schemas.registry import RegistryWrite
 from .certificates import CONTENT_TYPES
 from .crypto import CodeVault
 
+# The two customer PDFs. `column` holds the storage key; size/uploaded_at are admin-facing metadata.
+DOCUMENTS = {
+    "certificate": {
+        "column": "certificate_path", "size": "certificate_size", "uploaded": "certificate_uploaded_at",
+        "label": "Star Dedication Certificate", "filename": "Star-Dedication-Certificate",
+    },
+    "registry_document": {
+        "column": "registry_document_path", "size": "registry_document_size", "uploaded": "registry_document_uploaded_at",
+        "label": "Certificate of Celestial Registry", "filename": "Certificate-of-Celestial-Registry",
+    },
+}
+
 
 def to_storage(payload: RegistryWrite, vault: CodeVault) -> dict[str, Any]:
     data = payload.model_dump()
@@ -18,10 +30,17 @@ def to_storage(payload: RegistryWrite, vault: CodeVault) -> dict[str, Any]:
     return data
 
 
-def _file_info(row: dict[str, Any], column: str) -> dict[str, Any]:
-    path = row.get(column)
+def _public_file_info(row: dict[str, Any], kind: str) -> dict[str, Any]:
+    """Customers learn only whether a document exists and what it is; never a key, size or URL."""
+    spec = DOCUMENTS[kind]
+    path = row.get(spec["column"])
     content_type = CONTENT_TYPES.get(Path(path).suffix.lower()) if path else None
-    return {"available": bool(path), "content_type": content_type}
+    return {"available": bool(path), "content_type": content_type, "label": spec["label"]}
+
+
+def _admin_file_info(row: dict[str, Any], kind: str) -> dict[str, Any]:
+    spec = DOCUMENTS[kind]
+    return {**_public_file_info(row, kind), "size": row.get(spec["size"]), "uploaded_at": row.get(spec["uploaded"])}
 
 
 def to_admin(row: dict[str, Any], vault: CodeVault) -> dict[str, Any]:
@@ -38,16 +57,17 @@ def to_admin(row: dict[str, Any], vault: CodeVault) -> dict[str, Any]:
         "constellation": row["constellation"],
         "distance": row["distance"],
         "dedication_message": row["dedication_message"],
+        "contact_email": row.get("contact_email"),
         "status": row["status"],
-        "certificate": _file_info(row, "certificate_path"),
-        "registry_document": _file_info(row, "registry_document_path"),
+        "certificate": _admin_file_info(row, "certificate"),
+        "registry_document": _admin_file_info(row, "registry_document"),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
 
 
 def to_public(row: dict[str, Any], vault: CodeVault) -> dict[str, Any]:
-    """Customer-facing shape: no database id, status or internal fields."""
+    """Customer-facing shape: no database id, status, contact email, storage key or internal field."""
     return {
         "public_id": row["public_id"],
         "registry_number": row["registry_number"],
@@ -62,6 +82,6 @@ def to_public(row: dict[str, Any], vault: CodeVault) -> dict[str, Any]:
             "constellation": row["constellation"],
             "distance": row["distance"],
         },
-        "certificate": _file_info(row, "certificate_path"),
-        "registry_document": _file_info(row, "registry_document_path"),
+        "certificate": _public_file_info(row, "certificate"),
+        "registry_document": _public_file_info(row, "registry_document"),
     }

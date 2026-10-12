@@ -10,12 +10,22 @@ from ..deps import (
     REGISTRY_COOKIE, REGISTRY_PURPOSE, REGISTRY_TTL, client_ip, get_repo, get_settings, get_storage, get_vault,
 )
 from ..schemas.registry import VerifyRequest
-from ..services.certificates import CertificateStorage
+from ..services.certificates import DocumentStorage
 from ..services.crypto import CodeVault
 from ..services.registry_service import to_public
-from .files import certificate_response
+from .files import document_response
 
 router = APIRouter(prefix="/api/registries", tags=["registry"])
+
+def _throttle_downloads(request: Request) -> None:
+    """Every document request counts (allowed or not), so a stolen cookie or a script cannot hammer the storage."""
+    limiter = request.app.state.download_limiter
+    key = client_ip(request)
+    wait = limiter.retry_after(key)
+    if wait:
+        raise HTTPException(429, "Too many download requests. Please try again shortly.", headers={"Retry-After": str(wait)})
+    limiter.record(key)
+
 
 VERIFY_FAILED = "Registry details could not be verified."
 
@@ -79,10 +89,11 @@ def get_registry_document(
     download: bool = False,
     repo: RegistryRepository = Depends(get_repo),
     settings: Settings = Depends(get_settings),
-    storage: CertificateStorage = Depends(get_storage),
+    storage: DocumentStorage = Depends(get_storage),
 ):
+    _throttle_downloads(request)
     row = _active_registry_for(request, public_id, repo, settings)
-    return certificate_response(row, storage, download, kind="registry_document")
+    return document_response(row, storage, download, kind="registry_document")
 
 
 @router.get("/{public_id}/certificate")
@@ -92,7 +103,8 @@ def get_certificate(
     download: bool = False,
     repo: RegistryRepository = Depends(get_repo),
     settings: Settings = Depends(get_settings),
-    storage: CertificateStorage = Depends(get_storage),
+    storage: DocumentStorage = Depends(get_storage),
 ):
+    _throttle_downloads(request)
     row = _active_registry_for(request, public_id, repo, settings)
-    return certificate_response(row, storage, download)
+    return document_response(row, storage, download)

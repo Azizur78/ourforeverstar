@@ -20,9 +20,10 @@ from pydantic import ValidationError
 
 from ..config import Settings
 from ..database.connection import connect
-from ..database.registry_repository import RegistryRepository
+from ..database.registry_repository import RegistryRepository, utc_now
 from ..schemas.registry import RegistryWrite
-from .certificates import CertificateStorage, InvalidCertificate, validate_certificate
+from .certificates import DocumentStorage, InvalidCertificate, validate_certificate
+from .registry_service import DOCUMENTS
 from .crypto import CodeVault
 from .registry_service import to_storage
 
@@ -54,7 +55,7 @@ def _load(settings: Settings) -> dict[str, Any] | None:
     return data
 
 
-def apply_staging_seed(settings: Settings, vault: CodeVault, storage: CertificateStorage) -> dict[str, int]:
+def apply_staging_seed(settings: Settings, vault: CodeVault, storage: DocumentStorage) -> dict[str, int]:
     data = _load(settings)
     if data is None:
         return {"added": 0, "skipped": 0}
@@ -79,16 +80,20 @@ def apply_staging_seed(settings: Settings, vault: CodeVault, storage: Certificat
                 continue
             row = repo.create(to_storage(payload, vault))
             added += 1
-            for entry, column, what in ((cert, "certificate_path", "certificate"),
-                                        (document, "registry_document_path", "registry document")):
+            for entry, kind, what in ((cert, "certificate", "certificate"),
+                                      (document, "registry_document", "registry document")):
                 if not entry:
                     continue
                 try:
                     content = base64.b64decode(entry["content_base64"], validate=True)
-                    extension = validate_certificate(entry["filename"], content, settings.max_certificate_bytes)
+                    # Seed files may be legacy images: they restore existing test data and are never newly uploaded.
+                    extension = validate_certificate(entry["filename"], content, settings.max_certificate_bytes,
+                                                     allow_images=True)
                 except (KeyError, TypeError, binascii.Error, ValueError, InvalidCertificate):
                     raise SeedError(f"Seed record #{index} has an invalid {what}.") from None
-                repo.update(row["id"], {column: storage.save(extension, content)})
+                spec = DOCUMENTS[kind]
+                repo.update(row["id"], {spec["column"]: storage.save(extension, content), spec["size"]: len(content),
+                                        spec["uploaded"]: utc_now()})
     finally:
         conn.close()
     log.warning("Staging seed applied: %d record(s) added, %d already present.", added, skipped)

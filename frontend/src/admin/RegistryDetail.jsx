@@ -69,8 +69,10 @@ export default function RegistryDetail() {
       <div className="preview-frame">
         <RegistryView
           registry={publicShape}
-          certificateUrls={{ view: api.admin.certificateUrl(registry.id), download: api.admin.certificateUrl(registry.id, true) }}
-          documentUrls={{ view: api.admin.registryDocumentUrl(registry.id), download: api.admin.registryDocumentUrl(registry.id, true) }}
+          documentUrls={{
+            certificate: { view: api.admin.certificateUrl(registry.id), download: api.admin.certificateUrl(registry.id, true) },
+            registry_document: { view: api.admin.registryDocumentUrl(registry.id), download: api.admin.registryDocumentUrl(registry.id, true) },
+          }}
         />
       </div>
     </>

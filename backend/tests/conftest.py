@@ -16,7 +16,8 @@ from app.main import create_app
 ADMIN_PASSWORD = "correct horse battery"
 
 PDF = b"%PDF-1.4\n%test\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+PDF2 = b"%PDF-1.7\n%a second, different document\n1 0 obj<<>>endobj\n%%EOF\n"
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32  # images are no longer accepted as new uploads (kept for negative tests)
 
 
 @pytest.fixture()

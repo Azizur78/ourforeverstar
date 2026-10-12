@@ -212,6 +212,7 @@ function VerifyDialog({ expired, onClose, onVerified }) {
         </form>
 
         <p className="vm-help">Need help? <Link to="/contact" className="text-link" onClick={onClose}>Contact Us</Link></p>
+        <p className="vm-help vm-help-recover">Lost your registry details? <Link to="/recover" className="text-link" onClick={onClose}>Request help</Link></p>
       </div>
     </div>
   )

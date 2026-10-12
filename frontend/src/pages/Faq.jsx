@@ -19,11 +19,11 @@ const FAQS = [
   ['Where can I find my Registry Code?',
     'Your Registry Code is shared with you privately when your registry is prepared. Keep it safe: you need both the Registry Number and the Registry Code to open your registry.'],
   ['What happens if I lose my registry details?',
-    <>Please <Link to="/contact" className="text-link">contact us on Instagram</Link>. We will help you recover access after confirming it is you.</>],
+    <>Send a request through our <Link to="/recover" className="text-link">registry recovery form</Link>. Our team reviews every request personally, and we only share details with an address we can verify. You can also <Link to="/contact" className="text-link">contact us on Instagram</Link>.</>],
   ['Can I verify my registry from the website?',
     'Yes. Verification is done securely on our servers, and only the registry that matches your Registry Number and Registry Code is shown.'],
   ['How do I get my certificate?',
-    'Your certificate is provided with your dedication. Once you verify your registry you can view and download it from your registry page, if one has been added.'],
+    'Once you verify your registry, the Your Documents section lets you download your Star Dedication Certificate and your Certificate of Celestial Registry as PDFs. If one is not there yet, it has not been uploaded; it will appear as soon as it is ready.'],
   ['Can I transfer my registry?', 'Transfer Certificate functionality is Coming Soon.'],
   ['Is the Wallet available?', 'The Wallet is Coming Soon.'],
 ]

@@ -1,20 +1,23 @@
 import sqlite3
 
-from conftest import PDF, PNG
+from conftest import PDF, PDF2, PNG
 
 
 def upload(admin, registry, name, data, ctype="application/octet-stream"):
     return admin.post(f"/api/admin/registries/{registry['id']}/certificate", files={"file": (name, data, ctype)})
 
 
-def test_valid_pdf_and_png_accepted(admin, registry, settings):
+def test_valid_pdf_accepted_and_images_are_no_longer_accepted(admin, registry, settings):
     r = upload(admin, registry, "cert.pdf", PDF)
     assert r.status_code == 200
-    assert r.json()["certificate"] == {"available": True, "content_type": "application/pdf"}
+    assert r.json()["certificate"]["available"] is True and r.json()["certificate"]["content_type"] == "application/pdf"
     served = admin.get(f"/api/admin/registries/{registry['id']}/certificate")
     assert served.status_code == 200 and served.content == PDF
 
-    assert upload(admin, registry, "cert.png", PNG).json()["certificate"]["content_type"] == "image/png"
+    assert upload(admin, registry, "second.pdf", PDF2).json()["certificate"]["content_type"] == "application/pdf"
+    for name, data in [("cert.png", PNG), ("cert.jpg", bytes([0xFF, 0xD8, 0xFF]) + bytes(30))]:
+        r = upload(admin, registry, name, data)
+        assert r.status_code == 415 and "PDF" in r.json()["message"], name
 
 
 def test_only_path_is_stored_and_replacement_removes_old_file(admin, registry, settings):
@@ -23,7 +26,7 @@ def test_only_path_is_stored_and_replacement_removes_old_file(admin, registry, s
     assert path1.startswith("certificates/") and path1.endswith(".pdf")
     assert (settings.upload_dir / path1).is_file()
 
-    upload(admin, registry, "b.png", PNG)
+    upload(admin, registry, "b.pdf", PDF2)
     assert not (settings.upload_dir / path1).exists()
 
 

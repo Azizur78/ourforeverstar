@@ -9,7 +9,8 @@ from typing import Any
 UPDATABLE = (
     "registry_number", "registry_code", "registry_code_hash", "dedicated_to", "dedicated_by",
     "dedication_date", "occasion", "star_catalogue", "constellation", "distance",
-    "dedication_message", "certificate_path", "registry_document_path", "status",
+    "dedication_message", "certificate_path", "registry_document_path", "certificate_size",
+    "certificate_uploaded_at", "registry_document_size", "registry_document_uploaded_at", "contact_email", "status",
 )
 
 
@@ -19,6 +20,9 @@ class DuplicateRegistryNumber(Exception):
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+utc_now = _now
 
 
 def _escape_like(value: str) -> str:

@@ -8,6 +8,7 @@ import Gifting from './pages/Gifting'
 import Home from './pages/Home'
 import HowItWorks from './pages/HowItWorks'
 import NotFound from './pages/NotFound'
+import Recover from './pages/Recover'
 import Registry from './pages/Registry'
 import { VerifyProvider } from './components/VerifyModal'
 
@@ -18,6 +19,8 @@ const ChangePassword = lazy(() => import('./admin/ChangePassword'))
 const Dashboard = lazy(() => import('./admin/Dashboard'))
 const RegistryList = lazy(() => import('./admin/RegistryList'))
 const RegistryForm = lazy(() => import('./admin/RegistryForm'))
+const RecoveryList = lazy(() => import('./admin/RecoveryList'))
+const RecoveryDetail = lazy(() => import('./admin/RecoveryDetail'))
 const RegistryBatchForm = lazy(() => import('./admin/RegistryBatchForm'))
 const RegistryDetail = lazy(() => import('./admin/RegistryDetail'))
 
@@ -35,6 +38,7 @@ export default function App() {
           <Route path="contact" element={<Contact />} />
           {/* /verify (QR / NFC / bookmarks) shows the home page with the Verify Registry modal open. */}
           <Route path="verify" element={<Home />} />
+          <Route path="recover" element={<Recover />} />
           <Route path="registry/:publicId" element={<Registry />} />
           <Route path="*" element={<NotFound />} />
         </Route>
@@ -42,6 +46,8 @@ export default function App() {
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="password" element={<ChangePassword />} />
+          <Route path="recovery" element={<RecoveryList />} />
+          <Route path="recovery/:id" element={<RecoveryDetail />} />
           <Route path="registries" element={<RegistryList />} />
           <Route path="registries/new" element={<RegistryBatchForm />} />
           <Route path="registries/:id" element={<RegistryDetail />} />

@@ -1,17 +1,19 @@
 export const EMPTY_REGISTRY = {
   registry_number: '', registry_code: '', dedicated_to: '', dedicated_by: '', dedication_date: '',
-  occasion: '', star_catalogue: '', constellation: '', distance: '', dedication_message: '', status: 'active',
+  occasion: '', star_catalogue: '', constellation: '', distance: '', dedication_message: '', contact_email: '', status: 'active',
 }
 
-export const CERT_ACCEPT = '.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg'
-const CERT_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg']
+// New uploads are PDF only (the server enforces this too).
+export const CERT_ACCEPT = '.pdf,application/pdf'
+const CERT_EXTENSIONS = ['.pdf']
+export const DOC_LABELS = { certificate: 'Star Dedication Certificate', registry_document: 'Certificate of Celestial Registry' }
 const CERT_MAX_BYTES = 5 * 1024 * 1024
 
 /** Same rules the server applies to certificate uploads; the server remains the authority. */
 export function certificateError(file) {
   if (!file) return ''
   const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : ''
-  if (!CERT_EXTENSIONS.includes(ext)) return 'Unsupported file type. Upload a PDF, PNG or JPG file.'
+  if (!CERT_EXTENSIONS.includes(ext)) return 'Unsupported file type. Upload a PDF file.'
   if (file.size > CERT_MAX_BYTES) return 'File is too large. Maximum size is 5 MB.'
   return ''
 }
@@ -59,6 +61,10 @@ export default function RegistryFields({ idPrefix = '', values, errors = {}, onC
             control: <input {...props('registry_code')} required autoComplete="off" spellCheck="false" />,
           })}
         </div>
+        {field('contact_email', 'Customer contact email', {
+          hint: 'Private. Used only to verify recovery requests; never shown to customers. Leave blank if unknown.',
+          control: <input {...props('contact_email')} type="email" autoComplete="off" maxLength={254} />,
+        })}
       </fieldset>
 
       <fieldset>
@@ -91,7 +97,7 @@ export default function RegistryFields({ idPrefix = '', values, errors = {}, onC
       </fieldset>
 
       <fieldset>
-        <legend>Certificate, registry &amp; status</legend>
+        <legend>Documents &amp; status</legend>
         <div className="form-grid three">
           {certificate}
           {registryDocument}

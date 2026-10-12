@@ -94,8 +94,7 @@ bound to the password hash). Wrong-current-password attempts are rate limited. I
 `DELETE /api/admin/registries/{id}` deactivates; registries are never hard-deleted in V1.
 
 **Registry document.** Alongside the certificate, an admin can attach a registry document (PDF, PNG or JPG, same checks and storage as
-certificates) to each registry, in the Add form (per record) or the Edit form. A verified customer sees a "Registry" tab with View and
-Download buttons only when one exists. Existing databases gain the new `registry_document_path` column automatically at startup.
+certificates) to each registry, in the Add form (per record) or the Edit form. A verified customer sees both under Your Documents. Existing databases gain new columns automatically at startup.
 
 **Certificates.** PDF, PNG or JPG, up to 5 MB. Validated by extension and file signature, saved under a server-generated
 name in `backend/uploads/certificates/`. Only the relative path is stored in SQLite. Files are not publicly served and
@@ -105,10 +104,11 @@ are streamed only to a verified customer or an admin. Storage sits behind a smal
 ### API summary
 
 Public: `POST /api/registries/verify`, `GET /api/registries/{public_id}`, `GET /api/registries/{public_id}/certificate`,
-`GET /api/registries/{public_id}/registry-document`.
+`GET /api/registries/{public_id}/registry-document`, `POST /api/recovery-requests`.
 Admin (session required): `POST /api/admin/login|logout`, `GET /api/admin/me|stats`,
 `GET|POST /api/admin/registries`, `GET|PUT|DELETE /api/admin/registries/{id}`, `PATCH .../status`,
-`POST|GET .../certificate`, `POST|GET .../registry-document`, `POST .../registries/batch`. Error bodies are `{"message": ...}` with optional `errors` / `field`; no stack traces.
+`POST|GET .../certificate`, `POST|GET .../registry-document`, `POST .../registries/batch`,
+`GET /api/admin/recovery`, `GET|PATCH /api/admin/recovery/{id}`, `POST /api/admin/recovery/{id}/send-email`. Error bodies are `{"message": ...}` with optional `errors` / `field`; no stack traces.
 
 ## One-time migration of the existing ~40 customers
 
@@ -196,6 +196,88 @@ through Admin > Registries > View; to see it as a customer, activate that record
 Verify an active record, a wrong code and an inactive record; log in to the Admin; open the certificate preview. Then, from two
 different devices or networks, make a few wrong attempts from one and confirm the other is not blocked (this confirms the rate
 limiter sees real client IPs through `CF-Connecting-IP`).
+
+## Documents: storage, downloads and AWS setup
+
+**How a document travels.** Admin browser, then a multipart request to the API, which checks it is a complete PDF within the size limit,
+streams it to storage under a random server-generated key, and records only that key plus size and upload time in the database
+(`certificate_path`, `registry_document_path`, ...). Customers never see keys or storage addresses.
+
+**Storage backends** (one interface, chosen by `STORAGE_BACKEND`):
+
+| Backend | Use | Download |
+|---|---|---|
+| `local` | development | streamed by the API after authorisation |
+| `s3` | production | the API authorises, then redirects (302) to a **read-only pre-signed URL that expires in 5 minutes** |
+
+The bucket stays private. A pre-signed URL is a temporary bearer credential: it is issued only after the customer has verified their
+registry, is never stored, and is never logged. Document requests are rate limited per visitor (30 per 5 minutes).
+
+| Variable | Meaning |
+|---|---|
+| `STORAGE_BACKEND` | `local` (default) or `s3` |
+| `S3_BUCKET`, `S3_REGION` | required for `s3` |
+| `S3_PREFIX` | optional folder in the bucket (e.g. `prod`) |
+| `S3_ENDPOINT_URL` | optional S3-compatible endpoint |
+| `DOWNLOAD_URL_TTL_SECONDS` | link lifetime, 60-900 (default 300) |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | standard AWS credentials, set on the server only (or use an attached role) |
+
+### AWS setup still to be done by you (the code creates nothing in AWS)
+1. Create **one private S3 bucket** in your region. Turn **Block all public access** ON and enable default encryption (SSE-S3).
+   Optional: enable versioning to protect against accidental overwrites (it keeps old versions, so it costs a little storage).
+2. Create an IAM user (or role) allowed to touch only that bucket. Minimum policy (replace `BUCKET` and `PREFIX`):
+   ```json
+   {"Version": "2012-10-17", "Statement": [
+     {"Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::BUCKET/PREFIX/*"},
+     {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::BUCKET",
+      "Condition": {"StringLike": {"s3:prefix": ["PREFIX/*"]}}}
+   ]}
+   ```
+   (`s3:ListBucket` is optional; without it S3 answers 403 instead of 404 for a missing file, which the app treats as "unavailable".)
+3. Give the server the credentials as environment variables (never in Git), set `STORAGE_BACKEND=s3`, `S3_BUCKET`, `S3_REGION`, and restart.
+4. Upload one test document in the admin and download it as a verified customer.
+
+**Existing local files.** Keys are identical locally and in S3, so migration is a straight copy and the database does not change:
+`python scripts/migrate_documents_to_s3.py` (dry run) then `... --commit`. It never overwrites or deletes anything; remove the local copies
+yourself after testing. **Staging on Render Free:** S3 alone does not make staging durable, because the SQLite database that points at the
+files is also wiped on every redeploy. Use a host with a persistent disk for the database (see "Future production deployment").
+
+**Cost.** Two small PDFs per customer is a tiny amount of storage. S3 charges per GB-month stored plus per-request and data-transfer fees,
+so cost grows with customers and downloads and is not guaranteed to be zero even within free-tier allowances. Check the current AWS
+pricing page and set a billing alarm.
+
+## Registry recovery (manual, no OTP, no accounts)
+
+A customer who lost their details uses **/recover** (also linked from the Verify Registry window and the FAQ): name, email, optional
+registry number and message. Whatever they send, the answer is identical, so nobody can learn whether an email or registry exists.
+Requests are stored, de-duplicated (one open request per email and registry per day, three per email per day) and rate limited per visitor.
+
+An admin works them in **Admin > Recovery**: Pending, Under review, Approved or Rejected, then Completed. Rules the system enforces:
+- A matching **name** never authorises anything.
+- Approval needs a linked registry and either (a) the submitted email equals the **Customer contact email** saved on that registry
+  (a private, admin-entered field that customers never see), or (b) the admin confirms they verified the person another way and records how.
+- The saved contact email is never changed by approving a request.
+- **Send registry details by email** works only on an approved request and sends the Registry Number and Registry Code to the registry's own
+  address (or, if the registry has none, to the submitted address after manual verification). The email contains no document links:
+  the customer verifies on the website and downloads from Your Documents.
+- A failed send is recorded and the request stays Approved; only a send the mail server **accepted** completes it. Acceptance by the mail
+  server is not proof the message reached the inbox.
+
+| Variable | Meaning |
+|---|---|
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_STARTTLS` | any SMTP relay (e.g. Amazon SES's SMTP interface) |
+| `EMAIL_FROM` | sender address, e.g. `Our Forever Star <no-reply@your-domain.example>` |
+| `PUBLIC_BASE_URL` | website address used for the link in the email |
+
+Nothing is sent until `SMTP_HOST` and `EMAIL_FROM` are set; the admin screen then says email is not configured instead of pretending.
+With SES, verify your sending domain first and request production access (new accounts start in a sandbox that only sends to verified addresses).
+
+### Trying it out by hand
+1. **Upload:** Admin > Registries > Add (or Edit). Choose a PDF for each document and save; the list shows Certificate and Registry ticks.
+2. **Download:** open the site, Verify Registry with that number and code, go to Your Documents, and use Download. A document with no upload
+   shows "Not uploaded yet".
+3. **Recovery:** on `/recover` submit a request using the email you saved on a registry; in Admin > Recovery open it, Start review, Approve
+   (the email matches), then Send registry details by email. Try again with a different email to see that manual verification is required.
 
 ## Known limitations / future work
 

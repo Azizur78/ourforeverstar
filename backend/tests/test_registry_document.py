@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.database.connection import init_db
 from app.main import create_app
-from conftest import ADMIN_PASSWORD, PDF, PNG, registry_payload
+from conftest import ADMIN_PASSWORD, PDF, PDF2, PNG, registry_payload
 from test_batch import cert_files, count, post, rec
 
 
@@ -26,38 +26,38 @@ def verify(c, number="DEV-2026-000001", code="TEST-CODE-1"):
 # ---------------------------------------------------------------- admin upload
 
 def test_new_records_start_without_a_registry_document(registry):
-    assert registry["registry_document"] == {"available": False, "content_type": None}
+    assert registry["registry_document"]["available"] is False and registry["registry_document"]["content_type"] is None
 
 
 def test_admin_can_upload_and_view_the_registry_document(admin, registry):
     r = upload_doc(admin, registry, "registry.pdf", PDF)
     assert r.status_code == 200
-    assert r.json()["registry_document"] == {"available": True, "content_type": "application/pdf"}
+    assert r.json()["registry_document"]["available"] is True and r.json()["registry_document"]["content_type"] == "application/pdf"
     view = admin.get(f"/api/admin/registries/{registry['id']}/registry-document")
     assert view.status_code == 200 and view.content == PDF and view.headers["content-disposition"].startswith("inline")
     dl = admin.get(f"/api/admin/registries/{registry['id']}/registry-document?download=1")
     assert dl.headers["content-disposition"].startswith("attachment")
-    assert "Forever-Star-Registry-DEV-2026-000001.pdf" in dl.headers["content-disposition"]
+    assert "Certificate-of-Celestial-Registry-DEV-2026-000001.pdf" in dl.headers["content-disposition"]
     assert "private" in view.headers["cache-control"] and view.headers["x-content-type-options"] == "nosniff"
 
 
 def test_registry_document_and_certificate_are_independent(admin, registry, settings):
-    upload_cert(admin, registry, "cert.png", PNG)
+    upload_cert(admin, registry, "cert.pdf", PDF2)
     r = upload_doc(admin, registry, "registry.pdf", PDF)
-    assert r.json()["certificate"]["content_type"] == "image/png"
+    assert r.json()["certificate"]["content_type"] == "application/pdf"
     assert r.json()["registry_document"]["content_type"] == "application/pdf"
-    assert admin.get(f"/api/admin/registries/{registry['id']}/certificate").content == PNG
+    assert admin.get(f"/api/admin/registries/{registry['id']}/certificate").content == PDF2
     assert admin.get(f"/api/admin/registries/{registry['id']}/registry-document").content == PDF
     assert len(cert_files(settings)) == 2
     row = sqlite3.connect(settings.database_path).execute("SELECT certificate_path, registry_document_path FROM registries").fetchone()
-    assert row[0] != row[1] and row[1].startswith("certificates/")      # only a path is stored, never bytes
+    assert row[0] != row[1] and row[1].startswith("certificates/") and row[1].endswith(".pdf")      # only a path is stored, never bytes
 
 
 def test_replacing_the_document_removes_the_old_file_and_leaves_the_certificate(admin, registry, settings):
-    upload_cert(admin, registry, "cert.png", PNG)
+    upload_cert(admin, registry, "cert.pdf", PDF2)
     upload_doc(admin, registry, "a.pdf", PDF)
-    upload_doc(admin, registry, "b.png", PNG)
-    assert admin.get(f"/api/admin/registries/{registry['id']}/registry-document").headers["content-type"] == "image/png"
+    upload_doc(admin, registry, "b.pdf", PDF2)
+    assert admin.get(f"/api/admin/registries/{registry['id']}/registry-document").content == PDF2
     assert len(cert_files(settings)) == 2                                # old document deleted, certificate kept
 
 
@@ -74,7 +74,7 @@ def test_unsupported_oversized_disguised_and_empty_documents_are_rejected(admin,
 
 def test_missing_document_is_a_clean_404_and_admin_routes_are_protected(admin, registry, client):
     r = admin.get(f"/api/admin/registries/{registry['id']}/registry-document")
-    assert r.status_code == 404 and r.json()["message"] == "Registry document currently unavailable."
+    assert r.status_code == 404 and r.json()["message"] == "Certificate of Celestial Registry currently unavailable."
     assert upload_doc(admin, {"id": 9999}, "a.pdf", PDF).status_code == 404
     admin.post("/api/admin/logout")
     assert upload_doc(admin, registry, "a.pdf", PDF).status_code == 401
@@ -89,7 +89,7 @@ def test_customer_sees_and_downloads_the_document_only_after_verifying(settings,
     assert customer.get(f"/api/registries/{registry['public_id']}/registry-document").status_code == 401
     public_id = verify(customer).json()["public_id"]
     page = customer.get(f"/api/registries/{public_id}").json()
-    assert page["registry_document"] == {"available": True, "content_type": "application/pdf"}
+    assert page["registry_document"] == {"available": True, "content_type": "application/pdf", "label": "Certificate of Celestial Registry"}
     assert "registry_document_path" not in json.dumps(page) and "certificates/" not in json.dumps(page)
     doc = customer.get(f"/api/registries/{public_id}/registry-document")
     assert doc.status_code == 200 and doc.content == PDF
@@ -111,7 +111,7 @@ def test_customer_without_a_document_gets_a_clean_404(settings, registry):
     public_id = verify(customer).json()["public_id"]
     assert customer.get(f"/api/registries/{public_id}").json()["registry_document"]["available"] is False
     r = customer.get(f"/api/registries/{public_id}/registry-document")
-    assert r.status_code == 404 and r.json()["message"] == "Registry document currently unavailable."
+    assert r.status_code == 404 and r.json()["message"] == "Certificate of Celestial Registry currently unavailable."
 
 
 # ---------------------------------------------------------------- batch
@@ -125,12 +125,12 @@ def post_with_docs(client, records, certs=None, docs=None):
 
 
 def test_batch_attaches_each_document_to_its_own_record(admin, settings):
-    r = post_with_docs(admin, [rec(1), rec(2), rec(3)], certs={2: ("c3.png", PNG)}, docs={0: ("r1.pdf", PDF), 2: ("r3.png", PNG)})
+    r = post_with_docs(admin, [rec(1), rec(2), rec(3)], certs={2: ("c3.pdf", PDF2)}, docs={0: ("r1.pdf", PDF), 2: ("r3.pdf", PDF2)})
     assert r.status_code == 201
     one, two, three = sorted(r.json()["created"], key=lambda c: c["registry_number"])
     assert one["registry_document"]["content_type"] == "application/pdf" and not one["certificate"]["available"]
     assert not two["registry_document"]["available"] and not two["certificate"]["available"]     # nothing inherited
-    assert three["registry_document"]["content_type"] == "image/png" and three["certificate"]["content_type"] == "image/png"
+    assert three["registry_document"]["content_type"] == "application/pdf" and three["certificate"]["content_type"] == "application/pdf"
     assert admin.get(f"/api/admin/registries/{one['id']}/registry-document").content == PDF
     assert admin.get(f"/api/admin/registries/{two['id']}/registry-document").status_code == 404
     assert len(cert_files(settings)) == 3                                  # r1, c3 and r3: three distinct files
@@ -162,7 +162,7 @@ def test_database_failure_removes_documents_too(admin, settings, monkeypatch):
     monkeypatch.setattr(rr.RegistryRepository, "create_many", lambda self, rows: (_ for _ in ()).throw(RuntimeError("disk full")))
     c = TestClient(create_app(settings), raise_server_exceptions=False)
     c.post("/api/admin/login", json={"username": "admin", "password": ADMIN_PASSWORD})
-    r = post_with_docs(c, [rec(1)], certs={0: ("c.png", PNG)}, docs={0: ("r.pdf", PDF)})
+    r = post_with_docs(c, [rec(1)], certs={0: ("c.pdf", PDF2)}, docs={0: ("r.pdf", PDF)})
     assert r.status_code == 500 and "disk full" not in r.text
     assert cert_files(settings) == [] and count(settings) == 0
 
@@ -207,7 +207,7 @@ def test_existing_database_is_upgraded_in_place_without_losing_data(settings):
 
 def test_staging_seed_restores_registry_documents_too(settings):
     seed = {"records": [{**registry_payload(), "registry_document": {"filename": "r.pdf", "content_base64": base64.b64encode(PDF).decode()},
-                         "certificate": {"filename": "c.png", "content_base64": base64.b64encode(PNG).decode()}}]}
+                         "certificate": {"filename": "c.png", "content_base64": base64.b64encode(PNG).decode()}}]}  # legacy image
     c = TestClient(create_app(replace(settings, staging_seed_b64=base64.b64encode(json.dumps(seed).encode()).decode())))
     c.post("/api/admin/login", json={"username": "admin", "password": ADMIN_PASSWORD})
     item = c.get("/api/admin/registries").json()["items"][0]

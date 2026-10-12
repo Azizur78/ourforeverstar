@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react'
 import { formatDate } from '../lib/format'
 import { formatCatalogue, nameScale, splitNames } from '../lib/names'
 
-const BASE_SECTIONS = [
+const SECTIONS = [
   ['dedication', 'Dedication'],
   ['star', 'Star details'],
-  ['certificate', 'Certificate'],
+  ['documents', 'Documents'],
 ]
-const DOCUMENT_SECTION = ['registry-document', 'Registry']
+// The two customer PDFs, in the order they are shown.
+const DOCUMENTS = [
+  ['certificate', 'Star Dedication Certificate'],
+  ['registry_document', 'Certificate of Celestial Registry'],
+]
 
 function Detail({ label, value, tone = 'text' }) {
   return (
@@ -55,17 +59,33 @@ function useActiveSection(idList) {
 }
 
 
+/** One document: download/view when it exists, a plain explanation when it does not. */
+function DocumentCard({ label, info = {}, urls }) {
+  const id = `doc-${label.toLowerCase().replace(/[^a-z]+/g, '-')}`
+  return (
+    <article className="doc-card" aria-labelledby={id}>
+      <h3 id={id}>{label}</h3>
+      {info.available && urls ? (
+        <div className="actions center">
+          <a className="btn btn-primary" href={urls.download}>Download {label}</a>
+          <a className="btn btn-ghost" href={urls.view} target="_blank" rel="noopener noreferrer">
+            View<span className="sr-only"> {label} (opens in a new tab)</span>
+          </a>
+        </div>
+      ) : (
+        <p className="muted doc-missing" role="status">Not uploaded yet. It will appear here as soon as it is ready.</p>
+      )}
+    </article>
+  )
+}
+
 /**
  * The customer-facing registry. Shared by the public registry page and the admin preview.
- * certificateUrls / documentUrls: { view, download } for the current context.
+ * documentUrls: { certificate: {view, download}, registry_document: {view, download} } for the current context.
  */
-export default function RegistryView({ registry, certificateUrls, documentUrls }) {
-  const { star = {}, certificate = {}, registry_document: doc = {} } = registry
-  const isImage = certificate.content_type?.startsWith('image/')
-  const showDocument = Boolean(doc.available && documentUrls)
-  // The Registry tab only exists when a registry document has been uploaded.
-  const sections = showDocument ? [...BASE_SECTIONS, DOCUMENT_SECTION] : BASE_SECTIONS
-  const active = useActiveSection(sections.map(([id]) => id).join(','))
+export default function RegistryView({ registry, documentUrls = {} }) {
+  const { star = {} } = registry
+  const active = useActiveSection(SECTIONS.map(([id]) => id).join(','))
 
   return (
     <article className="registry">
@@ -77,7 +97,7 @@ export default function RegistryView({ registry, certificateUrls, documentUrls }
           <p className="reg-by">Dedicated by <span>{registry.dedicated_by}</span></p>
         )}
         <nav className="registry-nav" aria-label="Registry sections">
-          {sections.map(([id, label]) => (
+          {SECTIONS.map(([id, label]) => (
             <a key={id} href={`#${id}`} aria-current={active === id ? 'true' : undefined}>{label}</a>
           ))}
         </nav>
@@ -109,45 +129,15 @@ export default function RegistryView({ registry, certificateUrls, documentUrls }
         </dl>
       </section>
 
-      <section id="certificate" className="registry-section" aria-labelledby="h-cert">
-        <h2 id="h-cert">Certificate</h2>
-        {certificate.available && certificateUrls ? (
-          <div className="certificate">
-            <div className="cert-preview">
-              {isImage ? (
-                <img src={certificateUrls.view} alt={`Certificate for ${registry.dedicated_to}`} loading="lazy" />
-              ) : (
-                <div className="cert-placeholder" aria-hidden="true">
-                  <svg viewBox="0 0 64 64" width="44" height="44"><path d="M32 6l6 18 18 8-18 8-6 18-6-18-18-8 18-8z" fill="currentColor" /></svg>
-                  <span>Certificate of dedication</span>
-                  <small>{registry.registry_number}</small>
-                </div>
-              )}
-            </div>
-            <div className="actions">
-              <a className="btn btn-primary" href={certificateUrls.view} target="_blank" rel="noopener noreferrer">
-                View Certificate<span className="sr-only"> (opens in a new tab)</span>
-              </a>
-              <a className="btn btn-ghost" href={certificateUrls.download}>Download Certificate</a>
-            </div>
-          </div>
-        ) : (
-          <p className="muted unavailable">Certificate currently unavailable.</p>
-        )}
+      <section id="documents" className="registry-section" aria-labelledby="h-docs">
+        <h2 id="h-docs">Your Documents</h2>
+        <p className="doc-lede">Both documents are yours to keep. Download them whenever you verify your registry.</p>
+        <div className="doc-grid">
+          {DOCUMENTS.map(([key, label]) => (
+            <DocumentCard key={key} label={label} info={registry[key]} urls={documentUrls[key]} />
+          ))}
+        </div>
       </section>
-
-      {showDocument && (
-        <section id="registry-document" className="registry-section" aria-labelledby="h-registry-doc">
-          <h2 id="h-registry-doc">Registry document</h2>
-          <p className="doc-lede">Your registry, kept as a document you can keep and share.</p>
-          <div className="actions center">
-            <a className="btn btn-primary" href={documentUrls.view} target="_blank" rel="noopener noreferrer">
-              View Registry<span className="sr-only"> (opens in a new tab)</span>
-            </a>
-            <a className="btn btn-ghost" href={documentUrls.download}>Download Registry</a>
-          </div>
-        </section>
-      )}
     </article>
   )
 }

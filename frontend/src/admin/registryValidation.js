@@ -2,6 +2,7 @@
 // the server validates every record again and is the authority.
 const NUMBER_RE = /^[A-Z0-9][A-Z0-9\-_/]{2,39}$/
 const CODE_RE = /^[A-Za-z0-9][A-Za-z0-9\-]{3,39}$/
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+([.][A-Za-z0-9-]+)+$/
 
 export const MESSAGES = {
   duplicateInBatch: 'Duplicate registry number in this batch.',
@@ -31,6 +32,8 @@ export function validateRecord(values) {
   }
   const code = values.registry_code.trim()
   if (code && !CODE_RE.test(code)) errors.registry_code = 'Use 4-40 letters, numbers or hyphens.'
+  const email = String(values.contact_email ?? '').trim()
+  if (email && (email.length > 254 || !EMAIL_RE.test(email))) errors.contact_email = 'Enter a valid email address.'
   for (const [field, max] of Object.entries(MAX)) {
     if (String(values[field] ?? '').trim().length > max) errors[field] = `Use at most ${max} characters.`
   }

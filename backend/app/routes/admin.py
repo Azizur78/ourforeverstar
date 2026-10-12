@@ -1,24 +1,28 @@
 """Admin endpoints. Every route except login requires a valid admin session."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 
 from ..auth import tokens
 from ..auth.passwords import DUMMY_HASH, hash_password, verify_password
 from ..config import Settings
 from ..database.admin_repository import AdminCredentialStore
-from ..database.registry_repository import DuplicateRegistryNumber, RegistryRepository
+from ..database.registry_repository import DuplicateRegistryNumber, RegistryRepository, utc_now
 from ..deps import (
     ADMIN_COOKIE, ADMIN_PURPOSE, ADMIN_TTL, admin_subject, client_ip, get_admin_store, get_repo, get_settings, get_storage, get_vault, require_admin,
 )
 from ..schemas.registry import ChangePasswordRequest, LoginRequest, RegistryWrite, StatusUpdate
-from ..services.certificates import CertificateStorage, InvalidCertificate, validate_certificate
+from ..services.certificates import DocumentStorage, InvalidCertificate, inspect_stream
 from ..services.crypto import CodeVault
 from ..services.registry_batch import (
     MAX_CERTIFICATES, BatchRejected, parse_certificate_map, parse_records, validate_batch,
 )
-from ..services.registry_service import to_admin, to_storage
-from .files import certificate_response
+from ..services.registry_service import DOCUMENTS, to_admin, to_storage
+from .files import document_response
+
+log = logging.getLogger("forever_star.admin")
 
 public_router = APIRouter(prefix="/api/admin", tags=["admin-auth"])
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -33,6 +37,15 @@ def _set_session_cookie(response: Response, settings: Settings, password_hash: s
         ADMIN_COOKIE, token, max_age=ADMIN_TTL, httponly=True, samesite="strict",
         secure=settings.is_production, path="/api/admin",
     )
+
+
+def _discard(storage: DocumentStorage, keys: list[str]) -> None:
+    """Remove files stored for a request that then failed. A failure here must not mask the original error."""
+    for key in keys:
+        try:
+            storage.delete(key)
+        except Exception:  # noqa: BLE001
+            log.warning("Could not remove an orphaned document object after a failed save.")
 
 
 def _duplicate() -> HTTPException:
@@ -163,7 +176,7 @@ def create_registries_batch(
     repo: RegistryRepository = Depends(get_repo),
     vault: CodeVault = Depends(get_vault),
     settings: Settings = Depends(get_settings),
-    storage: CertificateStorage = Depends(get_storage),
+    storage: DocumentStorage = Depends(get_storage),
 ):
     """Create several registries (each with an optional certificate) in one all-or-nothing request.
 
@@ -188,29 +201,24 @@ def create_registries_batch(
         rows = []
         for i, payload in enumerate(batch.payloads):
             row = to_storage(payload, vault)
-            if i in batch.certificates:
-                upload, extension = batch.certificates[i]
-                key = storage.save(extension, upload.file.read())
-                saved_keys.append(key)
-                row["certificate_path"] = key
-            if i in batch.registry_documents:
-                upload, extension = batch.registry_documents[i]
-                key = storage.save(extension, upload.file.read())
-                saved_keys.append(key)
-                row["registry_document_path"] = key
+            for kind, files in (("certificate", batch.certificates), ("registry_document", batch.registry_documents)):
+                if i in files:
+                    upload, extension, size = files[i]
+                    key = storage.save_stream(extension, upload.file)
+                    saved_keys.append(key)
+                    spec = DOCUMENTS[kind]
+                    row[spec["column"]], row[spec["size"]], row[spec["uploaded"]] = key, size, utc_now()
             rows.append(row)
         created = repo.create_many(rows)
     except DuplicateRegistryNumber:
         # Lost a race with another request between validation and insert; nothing was written.
-        for key in saved_keys:
-            storage.delete(key)
+        _discard(storage, saved_keys)
         raise HTTPException(409, detail={
             "message": "A registry number in this batch was just added by someone else. Nothing was saved.",
             "errors": [],
         })
     except Exception:
-        for key in saved_keys:
-            storage.delete(key)
+        _discard(storage, saved_keys)
         raise
     return {"count": len(created), "created": [to_admin(r, vault) for r in created]}
 
@@ -252,24 +260,36 @@ def deactivate_registry(registry_id: int, repo: RegistryRepository = Depends(get
 
 # ---- certificate -----------------------------------------------------------
 
-def _replace_file(registry_id: int, column: str, request: Request, file: UploadFile, repo: RegistryRepository,
-                  vault: CodeVault, settings: Settings, storage: CertificateStorage) -> dict:
-    """Validate an upload, store it, point the registry at it and delete the file it replaces."""
+def _replace_file(registry_id: int, kind: str, request: Request, file: UploadFile, repo: RegistryRepository,
+                  vault: CodeVault, settings: Settings, storage: DocumentStorage) -> dict:
+    """Validate a PDF, store it under a fresh server-generated key, point the registry at it, then drop the old file.
+
+    The old file is only removed after the database points at the new one, and a failed database update removes
+    the new file again, so the registry is never left referencing a missing or half-written document.
+    """
+    spec = DOCUMENTS[kind]
     row = _get_or_404(repo, registry_id)
     limit = settings.max_certificate_bytes
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > limit + 64 * 1024:
         raise HTTPException(413, f"File is too large. Maximum size is {limit / (1024 * 1024):g} MB.")
-    data = file.file.read(limit + 1)
     try:
-        extension = validate_certificate(file.filename or "", data, limit)
+        extension, size = inspect_stream(file.filename or "", file.file, limit)
     except InvalidCertificate as exc:
         raise HTTPException(413 if exc.too_large else 415, exc.message)
 
-    new_key = storage.save(extension, data)
-    updated = repo.update(registry_id, {column: new_key})
-    if row.get(column):
-        storage.delete(row[column])
+    try:
+        new_key = storage.save_stream(extension, file.file)
+    except Exception:  # noqa: BLE001
+        log.exception("Document upload to storage failed")
+        raise HTTPException(502, "The document could not be stored. Nothing was changed. Please try again.")
+    try:
+        updated = repo.update(registry_id, {spec["column"]: new_key, spec["size"]: size, spec["uploaded"]: utc_now()})
+    except Exception:
+        _discard(storage, [new_key])
+        raise
+    if row.get(spec["column"]):
+        _discard(storage, [row[spec["column"]]])
     return to_admin(updated, vault)  # type: ignore[arg-type]
 
 
@@ -281,15 +301,16 @@ def upload_certificate(
     repo: RegistryRepository = Depends(get_repo),
     vault: CodeVault = Depends(get_vault),
     settings: Settings = Depends(get_settings),
-    storage: CertificateStorage = Depends(get_storage),
+    storage: DocumentStorage = Depends(get_storage),
 ):
-    return _replace_file(registry_id, "certificate_path", request, file, repo, vault, settings, storage)
+    """Attach the Star Dedication Certificate (PDF)."""
+    return _replace_file(registry_id, "certificate", request, file, repo, vault, settings, storage)
 
 
 @router.get("/registries/{registry_id}/certificate")
 def view_certificate(registry_id: int, download: bool = False, repo: RegistryRepository = Depends(get_repo),
-                     storage: CertificateStorage = Depends(get_storage)):
-    return certificate_response(_get_or_404(repo, registry_id), storage, download)
+                     storage: DocumentStorage = Depends(get_storage)):
+    return document_response(_get_or_404(repo, registry_id), storage, download)
 
 
 @router.post("/registries/{registry_id}/registry-document")
@@ -300,13 +321,13 @@ def upload_registry_document(
     repo: RegistryRepository = Depends(get_repo),
     vault: CodeVault = Depends(get_vault),
     settings: Settings = Depends(get_settings),
-    storage: CertificateStorage = Depends(get_storage),
+    storage: DocumentStorage = Depends(get_storage),
 ):
-    """Attach the registry document (PDF, PNG or JPG) to a registry. Same rules as the certificate."""
-    return _replace_file(registry_id, "registry_document_path", request, file, repo, vault, settings, storage)
+    """Attach the Certificate of Celestial Registry (PDF)."""
+    return _replace_file(registry_id, "registry_document", request, file, repo, vault, settings, storage)
 
 
 @router.get("/registries/{registry_id}/registry-document")
 def view_registry_document(registry_id: int, download: bool = False, repo: RegistryRepository = Depends(get_repo),
-                           storage: CertificateStorage = Depends(get_storage)):
-    return certificate_response(_get_or_404(repo, registry_id), storage, download, kind="registry_document")
+                           storage: DocumentStorage = Depends(get_storage)):
+    return document_response(_get_or_404(repo, registry_id), storage, download, kind="registry_document")

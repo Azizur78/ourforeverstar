@@ -51,6 +51,8 @@ export const api = {
     `/api/registries/${encodeURIComponent(publicId)}/certificate${download ? '?download=1' : ''}`,
   registryDocumentUrl: (publicId, download = false) =>
     `/api/registries/${encodeURIComponent(publicId)}/registry-document${download ? '?download=1' : ''}`,
+  // Always answers the same way, so it never reveals whether an email or registry exists.
+  requestRecovery: (payload) => request('/api/recovery-requests', { method: 'POST', json: payload }),
 
   admin: {
     login: (username, password) => request('/api/admin/login', { method: 'POST', json: { username, password } }),
@@ -60,6 +62,13 @@ export const api = {
         method: 'POST', json: { current_password, new_password, confirm_new_password },
       }),
     me: () => request('/api/admin/me'),
+    recovery: {
+      summary: () => request('/api/admin/recovery/summary'),
+      list: (params) => request(`/api/admin/recovery${qs(params)}`),
+      get: (id) => request(`/api/admin/recovery/${id}`),
+      update: (id, body) => request(`/api/admin/recovery/${id}`, { method: 'PATCH', json: body }),
+      sendEmail: (id) => request(`/api/admin/recovery/${id}/send-email`, { method: 'POST' }),
+    },
     stats: () => request('/api/admin/stats'),
     list: (params) => request(`/api/admin/registries${qs(params)}`),
     get: (id) => request(`/api/admin/registries/${id}`),

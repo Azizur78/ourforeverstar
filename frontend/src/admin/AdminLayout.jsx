@@ -13,6 +13,7 @@ export default function AdminLayout() {
   const [user, setUser] = useState(undefined) // undefined = checking, null = signed out
   const [loadError, setLoadError] = useState('')
   const location = useLocation()
+  const [pendingRecovery, setPendingRecovery] = useState(0)
   const navigate = useNavigate()
   useMeta({ title: 'Admin', noindex: true })
 
@@ -24,6 +25,10 @@ export default function AdminLayout() {
         else setLoadError(err.message)
       })
   }, [])
+
+  useEffect(() => {
+    if (user) api.admin.recovery.summary().then((c) => setPendingRecovery(c.pending)).catch(() => {})
+  }, [user, location.pathname])
 
   async function logout() {
     try { await api.admin.logout() } finally {
@@ -49,6 +54,9 @@ export default function AdminLayout() {
               <NavLink to="/admin" end>Dashboard</NavLink>
               <NavLink to="/admin/registries" end>Registries</NavLink>
               <NavLink to="/admin/registries/new">Add registry</NavLink>
+              <NavLink to="/admin/recovery">
+                Recovery{pendingRecovery > 0 && <span className="nav-count" aria-label={`${pendingRecovery} pending`}>{pendingRecovery}</span>}
+              </NavLink>
               <NavLink to="/admin/password">Change password</NavLink>
             </nav>
             <div className="admin-user">

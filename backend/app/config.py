@@ -38,6 +38,21 @@ class Settings:
     # Staging only: JSON file (or base64 JSON in STAGING_SEED_B64) with the existing test records, applied on startup.
     staging_seed_file: Path | None = None
     staging_seed_b64: str = ""
+    # Document storage: "local" (development default) or "s3" (private bucket; production).
+    storage_backend: str = "local"
+    s3_bucket: str = ""
+    s3_region: str = ""
+    s3_prefix: str = ""
+    s3_endpoint_url: str = ""          # optional: an S3-compatible endpoint instead of AWS
+    download_url_ttl_seconds: int = 300  # lifetime of a pre-signed download URL
+    # Outgoing mail (recovery emails). Nothing is sent unless smtp_host and email_from are set.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = True
+    email_from: str = ""
+    public_base_url: str = ""          # e.g. https://www.example.com, used for links inside emails
 
     @property
     def is_production(self) -> bool:
@@ -71,6 +86,12 @@ def load_settings() -> Settings:
     max_mb = float(env("MAX_CERTIFICATE_MB", "5"))
     origins = tuple(o.strip() for o in env("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip())
 
+    storage_backend = env("STORAGE_BACKEND", "local").strip().lower()
+    if storage_backend not in ("local", "s3"):
+        raise ConfigError('STORAGE_BACKEND must be "local" or "s3".')
+    if storage_backend == "s3" and not (env("S3_BUCKET", "").strip() and env("S3_REGION", "").strip()):
+        raise ConfigError("STORAGE_BACKEND=s3 requires S3_BUCKET and S3_REGION (AWS credentials come from the standard AWS environment).")
+
     return Settings(
         app_env=app_env,
         database_path=_database_path(env("DATABASE_URL", "sqlite:///./data/forever_star.db")),
@@ -87,4 +108,17 @@ def load_settings() -> Settings:
         noindex=env("NOINDEX", "false").lower() == "true",
         staging_seed_file=_resolve_path(env("STAGING_SEED_FILE")) if env("STAGING_SEED_FILE") else None,
         staging_seed_b64=env("STAGING_SEED_B64", ""),
+        storage_backend=storage_backend,
+        s3_bucket=env("S3_BUCKET", "").strip(),
+        s3_region=env("S3_REGION", "").strip(),
+        s3_prefix=env("S3_PREFIX", "").strip().strip("/"),
+        s3_endpoint_url=env("S3_ENDPOINT_URL", "").strip(),
+        download_url_ttl_seconds=max(60, min(900, int(env("DOWNLOAD_URL_TTL_SECONDS", "300")))),
+        smtp_host=env("SMTP_HOST", "").strip(),
+        smtp_port=int(env("SMTP_PORT", "587")),
+        smtp_username=env("SMTP_USERNAME", ""),
+        smtp_password=env("SMTP_PASSWORD", ""),
+        smtp_starttls=env("SMTP_STARTTLS", "true").lower() == "true",
+        email_from=env("EMAIL_FROM", "").strip(),
+        public_base_url=env("PUBLIC_BASE_URL", "").strip().rstrip("/"),
     )

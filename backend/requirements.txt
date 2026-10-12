@@ -5,3 +5,4 @@ python-multipart==0.0.32
 python-dotenv==1.2.4
 cryptography==50.0.2
 openpyxl==3.1.5
+boto3==1.43.111       # private S3 document storage (only used when STORAGE_BACKEND=s3)

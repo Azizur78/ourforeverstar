@@ -1,7 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
-import RegistryFields, { CERT_ACCEPT, EMPTY_REGISTRY, Field, certificateError } from './RegistryFields'
+import { formatDateTime } from '../lib/format'
+import RegistryFields, { CERT_ACCEPT, DOC_LABELS, EMPTY_REGISTRY, Field, certificateError } from './RegistryFields'
+
+const kb = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`)
+
+/** One line under an upload field: whether a document exists, when it was uploaded, and a link to check it. */
+function CurrentFile({ info, href }) {
+  if (!info?.available) return <p className="hint">Not uploaded yet.</p>
+  return (
+    <p className="hint">
+      <span className="doc-ok">Uploaded</span>
+      {info.uploaded_at ? ` ${formatDateTime(info.uploaded_at)}` : ''}{info.size ? `, ${kb(info.size)}` : ''}{' · '}
+      <a href={href} target="_blank" rel="noopener noreferrer">View current</a>
+    </p>
+  )
+}
 
 /** Edit one existing registry. New registries are added with RegistryBatchForm. */
 export default function RegistryForm() {
@@ -67,8 +82,8 @@ export default function RegistryForm() {
     }
 
     for (const [upload, send, what] of [
-      [file, api.admin.uploadCertificate, 'certificate'],
-      [doc, api.admin.uploadRegistryDocument, 'registry document'],
+      [file, api.admin.uploadCertificate, DOC_LABELS.certificate],
+      [doc, api.admin.uploadRegistryDocument, DOC_LABELS.registry_document],
     ]) {
       if (!upload) continue
       try {
@@ -100,25 +115,21 @@ export default function RegistryForm() {
           errors={errors}
           onChange={(name, value) => setForm((f) => ({ ...f, [name]: value }))}
           certificate={(
-            <Field id="certificate" label={existing.certificate?.available ? 'Replace certificate' : 'Certificate'}
-              error={fileError} hint="PDF, PNG or JPG, up to 5 MB. Optional.">
+            <Field id="certificate" label={existing.certificate?.available ? `Replace ${DOC_LABELS.certificate}` : DOC_LABELS.certificate}
+              error={fileError} hint="PDF only, up to 5 MB. Optional.">
               <input id="certificate" type="file" accept={CERT_ACCEPT} onChange={pickFile}
                 aria-invalid={fileError ? true : undefined}
                 aria-describedby={fileError ? 'certificate-error' : 'certificate-hint'} />
-              {existing.certificate?.available && (
-                <p className="hint"><a href={api.admin.certificateUrl(existing.id)} target="_blank" rel="noopener noreferrer">Current certificate</a></p>
-              )}
+              <CurrentFile info={existing.certificate} href={api.admin.certificateUrl(existing.id)} />
             </Field>
           )}
           registryDocument={(
-            <Field id="registry_document" label={existing.registry_document?.available ? 'Replace registry document' : 'Registry document'}
-              error={docError} hint="PDF, PNG or JPG, up to 5 MB. Optional.">
+            <Field id="registry_document" label={existing.registry_document?.available ? `Replace ${DOC_LABELS.registry_document}` : DOC_LABELS.registry_document}
+              error={docError} hint="PDF only, up to 5 MB. Optional.">
               <input id="registry_document" type="file" accept={CERT_ACCEPT} onChange={pickDoc}
                 aria-invalid={docError ? true : undefined}
                 aria-describedby={docError ? 'registry_document-error' : 'registry_document-hint'} />
-              {existing.registry_document?.available && (
-                <p className="hint"><a href={api.admin.registryDocumentUrl(existing.id)} target="_blank" rel="noopener noreferrer">Current registry document</a></p>
-              )}
+              <CurrentFile info={existing.registry_document} href={api.admin.registryDocumentUrl(existing.id)} />
             </Field>
           )}
         />

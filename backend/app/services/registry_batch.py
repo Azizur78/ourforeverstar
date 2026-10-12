@@ -14,7 +14,7 @@ from pydantic import ValidationError
 
 from ..database.registry_repository import RegistryRepository
 from ..schemas.registry import RegistryWrite
-from .certificates import InvalidCertificate, validate_certificate
+from .certificates import InvalidCertificate, inspect_stream
 
 MAX_RECORDS = 50
 MAX_CERTIFICATES = 20
@@ -34,8 +34,9 @@ class BatchRejected(Exception):
 @dataclass
 class ValidatedBatch:
     payloads: list[RegistryWrite]
-    certificates: dict[int, tuple[UploadFile, str]]  # record index -> (upload, normalized extension)
-    registry_documents: dict[int, tuple[UploadFile, str]]
+    # record index -> (upload, normalized extension, size in bytes)
+    certificates: dict[int, tuple[UploadFile, str, int]]
+    registry_documents: dict[int, tuple[UploadFile, str, int]]
 
 
 def parse_records(raw: str) -> list[dict[str, Any]]:
@@ -67,20 +68,6 @@ def parse_certificate_map(raw: str, uploads: list[UploadFile], record_count: int
     return dict(zip(indexes, uploads))
 
 
-def _inspect_upload(upload: UploadFile, max_bytes: int) -> str:
-    """Validate a certificate without loading all of it into memory; returns the normalized extension."""
-    stream = upload.file
-    stream.seek(0, 2)
-    size = stream.tell()
-    stream.seek(0)
-    header = stream.read(16)
-    stream.seek(0)
-    if size > max_bytes:
-        # Reuse the single-upload size rule and message.
-        return validate_certificate(upload.filename or "", b"x" * (max_bytes + 1), max_bytes)
-    return validate_certificate(upload.filename or "", header if size else b"", max_bytes)
-
-
 def validate_batch(records: list[dict[str, Any]], uploads: dict[int, UploadFile], repo: RegistryRepository,
                    max_certificate_bytes: int, documents: dict[int, UploadFile] | None = None) -> ValidatedBatch:
     errors: list[dict[str, Any]] = []
@@ -105,13 +92,13 @@ def validate_batch(records: list[dict[str, Any]], uploads: dict[int, UploadFile]
         elif repo.get_by_number(number):
             errors.append({"index": indexes[0], "field": "registry_number", "message": "Registry number already exists."})
 
-    extensions: dict[int, str] = {}
-    doc_extensions: dict[int, str] = {}
+    extensions: dict[int, tuple[str, int]] = {}
+    doc_extensions: dict[int, tuple[str, int]] = {}
     documents = documents or {}
     for field, files, found in (("certificate", uploads, extensions), ("registry_document", documents, doc_extensions)):
         for i, upload in files.items():
             try:
-                found[i] = _inspect_upload(upload, max_certificate_bytes)
+                found[i] = inspect_stream(upload.filename or "", upload.file, max_certificate_bytes)
             except InvalidCertificate as exc:
                 errors.append({"index": i, "field": field, "message": exc.message})
 
@@ -121,6 +108,6 @@ def validate_batch(records: list[dict[str, Any]], uploads: dict[int, UploadFile]
         raise BatchRejected(f"{bad} {noun} attention. Nothing was saved.", sorted(errors, key=lambda e: e["index"]))
     return ValidatedBatch(
         payloads=[payloads[i] for i in range(len(records))],
-        certificates={i: (uploads[i], extensions[i]) for i in uploads},
-        registry_documents={i: (documents[i], doc_extensions[i]) for i in documents},
+        certificates={i: (uploads[i], *extensions[i]) for i in uploads},
+        registry_documents={i: (documents[i], *doc_extensions[i]) for i in documents},
     )

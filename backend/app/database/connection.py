@@ -31,6 +31,29 @@ CREATE TABLE IF NOT EXISTS admin_credentials (
     password_hash  TEXT NOT NULL,
     updated_at     TEXT NOT NULL
 );
+-- Customers who lost their registry details ask for help here. An admin reviews every request by hand.
+CREATE TABLE IF NOT EXISTS recovery_requests (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_ref         TEXT NOT NULL UNIQUE,
+    customer_name       TEXT NOT NULL,
+    email               TEXT NOT NULL,
+    registry_number     TEXT,
+    message             TEXT,
+    status              TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'under_review', 'approved', 'rejected', 'completed')),
+    admin_notes         TEXT,
+    verification_basis  TEXT CHECK (verification_basis IN ('email_match', 'manual') OR verification_basis IS NULL),
+    reviewed_by         TEXT,
+    reviewed_at         TEXT,
+    completed_at        TEXT,
+    email_status        TEXT NOT NULL DEFAULT 'not_sent' CHECK (email_status IN ('not_sent', 'sent', 'failed')),
+    email_sent_at       TEXT,
+    email_error         TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_status ON recovery_requests (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_recovery_email ON recovery_requests (email COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_registries_status ON registries (status);
 CREATE INDEX IF NOT EXISTS idx_registries_code_hash ON registries (registry_code_hash);
 CREATE INDEX IF NOT EXISTS idx_registries_dedicated_to ON registries (dedicated_to COLLATE NOCASE);
@@ -48,11 +71,23 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+# Columns added after the first release. Each is nullable, so existing rows stay valid.
+ADDITIVE_COLUMNS = {
+    "registry_document_path": "TEXT",          # second customer PDF (certificate of celestial registry)
+    "certificate_size": "INTEGER",             # bytes, for the admin overview
+    "certificate_uploaded_at": "TEXT",
+    "registry_document_size": "INTEGER",
+    "registry_document_uploaded_at": "TEXT",
+    "contact_email": "TEXT",                   # private; used only to verify recovery requests, never shown to customers
+}
+
+
 def _migrate(conn: sqlite3.Connection) -> None:
     """Additive, idempotent upgrades for databases created by earlier versions."""
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(registries)")}
-    if "registry_document_path" not in columns:
-        conn.execute("ALTER TABLE registries ADD COLUMN registry_document_path TEXT")
+    for name, ddl in ADDITIVE_COLUMNS.items():
+        if name not in columns:
+            conn.execute(f"ALTER TABLE registries ADD COLUMN {name} {ddl}")
 
 
 def init_db(db_path: Path) -> None:

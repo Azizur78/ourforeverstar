@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from conftest import ADMIN_PASSWORD, PDF, PNG, registry_payload
+from conftest import ADMIN_PASSWORD, PDF, PDF2, registry_payload
 
 
 def rec(n, **kw):
@@ -161,15 +161,15 @@ def test_truly_concurrent_identical_batches_create_exactly_one_set(settings):
 # ---------------------------------------------------------------- certificates
 
 def test_each_record_keeps_its_own_certificate(admin, settings):
-    r = post(admin, [rec(1), rec(2), rec(3)], certs={0: ("one.pdf", PDF), 2: ("three.png", PNG)})
+    r = post(admin, [rec(1), rec(2), rec(3)], certs={0: ("one.pdf", PDF), 2: ("three.pdf", PDF2)})
     assert r.status_code == 201
     created = {c["registry_number"]: c for c in r.json()["created"]}
     one, two, three = (created[f"BATCH-2026-{i:06d}"] for i in (1, 2, 3))
-    assert one["certificate"] == {"available": True, "content_type": "application/pdf"}
-    assert two["certificate"] == {"available": False, "content_type": None}      # did not inherit record 1's file
-    assert three["certificate"] == {"available": True, "content_type": "image/png"}
+    assert one["certificate"]["available"] is True and one["certificate"]["content_type"] == "application/pdf"
+    assert two["certificate"]["available"] is False and two["certificate"]["content_type"] is None      # did not inherit record 1's file
+    assert three["certificate"]["content_type"] == "application/pdf" and three["certificate"]["available"]
     assert admin.get(f"/api/admin/registries/{one['id']}/certificate").content == PDF
-    assert admin.get(f"/api/admin/registries/{three['id']}/certificate").content == PNG
+    assert admin.get(f"/api/admin/registries/{three['id']}/certificate").content == PDF2
     assert admin.get(f"/api/admin/registries/{two['id']}/certificate").status_code == 404
     assert len(cert_files(settings)) == 2
 

@@ -11,9 +11,10 @@ from fastapi.responses import JSONResponse
 from .config import Settings, load_settings
 from .database.connection import init_db
 from .frontend import mount_frontend
-from .routes import admin, public
-from .services.certificates import LocalCertificateStorage
+from .routes import admin, public, recovery
+from .services.storage import build_storage
 from .services.crypto import CodeVault
+from .services.email import build_email_sender
 from .services.rate_limit import RateLimiter
 from .services.staging_seed import apply_staging_seed
 
@@ -28,7 +29,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     init_db(settings.database_path)
     app.state.settings = settings
     app.state.vault = CodeVault(settings.secret_key)
-    app.state.storage = LocalCertificateStorage(settings.upload_dir)
+    app.state.storage = build_storage(settings)
+    app.state.email_sender = build_email_sender(settings)                       # None until SMTP is configured
+    app.state.recovery_limiter = RateLimiter(max_attempts=5, window_seconds=60 * 60)  # form submissions / IP
+    app.state.download_limiter = RateLimiter(max_attempts=30, window_seconds=5 * 60)  # document requests / IP
     app.state.verify_limiter = RateLimiter(max_attempts=10, window_seconds=15 * 60)  # failed attempts / IP
     app.state.password_limiter = RateLimiter(max_attempts=5, window_seconds=15 * 60)  # wrong current password
     app.state.login_limiter = RateLimiter(max_attempts=5, window_seconds=15 * 60)
@@ -84,6 +88,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(public.router)
+    app.include_router(recovery.public_router)
+    app.include_router(recovery.router)
     app.include_router(admin.public_router)
     app.include_router(admin.router)
     if settings.frontend_dist:
