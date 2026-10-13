@@ -47,6 +47,8 @@ export const api = {
   verify: (registry_number, registry_code) =>
     request('/api/registries/verify', { method: 'POST', json: { registry_number, registry_code } }),
   registry: (publicId) => request(`/api/registries/${encodeURIComponent(publicId)}`),
+  saveContactEmail: (publicId, email) =>
+    request(`/api/registries/${encodeURIComponent(publicId)}/contact-email`, { method: 'POST', json: { email } }),
   certificateUrl: (publicId, download = false) =>
     `/api/registries/${encodeURIComponent(publicId)}/certificate${download ? '?download=1' : ''}`,
   registryDocumentUrl: (publicId, download = false) =>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatDate } from '../lib/format'
+import { savingHint } from '../lib/platform'
 import { formatCatalogue, nameScale, splitNames } from '../lib/names'
 
 const SECTIONS = [
@@ -59,19 +60,30 @@ function useActiveSection(idList) {
 }
 
 
-/** One document: download/view when it exists, a plain explanation when it does not. */
+/**
+ * One document. View is the main action; saving a copy is a small, quiet option.
+ * A document that is not uploaded yet gets a plain explanation instead.
+ */
 function DocumentCard({ label, info = {}, urls }) {
   const id = `doc-${label.toLowerCase().replace(/[^a-z]+/g, '-')}`
+  const saveHint = useMemo(savingHint, [])
+
   return (
     <article className="doc-card" aria-labelledby={id}>
       <h3 id={id}>{label}</h3>
       {info.available && urls ? (
-        <div className="actions center">
-          <a className="btn btn-primary" href={urls.download}>Download {label}</a>
-          <a className="btn btn-ghost" href={urls.view} target="_blank" rel="noopener noreferrer">
-            View<span className="sr-only"> {label} (opens in a new tab)</span>
+        <>
+          <div className="actions center">
+            <a className="btn btn-primary" href={urls.view} target="_blank" rel="noopener noreferrer">
+              View<span className="sr-only"> {label} (opens in a new tab)</span>
+            </a>
+          </div>
+          {saveHint && <p className="hint doc-save-hint">{saveHint}</p>}
+          <a className="doc-download" href={urls.download}>
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            Download<span className="sr-only"> {label} (PDF)</span>
           </a>
-        </div>
+        </>
       ) : (
         <p className="muted doc-missing" role="status">Not uploaded yet. It will appear here as soon as it is ready.</p>
       )}
@@ -131,7 +143,7 @@ export default function RegistryView({ registry, documentUrls = {} }) {
 
       <section id="documents" className="registry-section" aria-labelledby="h-docs">
         <h2 id="h-docs">Your Documents</h2>
-        <p className="doc-lede">Both documents are yours to keep. Download them whenever you verify your registry.</p>
+        <p className="doc-lede">View your documents here. A small Download option sits under each one if you would like a copy.</p>
         <div className="doc-grid">
           {DOCUMENTS.map(([key, label]) => (
             <DocumentCard key={key} label={label} info={registry[key]} urls={documentUrls[key]} />

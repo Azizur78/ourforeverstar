@@ -82,6 +82,8 @@ def to_public(row: dict[str, Any], vault: CodeVault) -> dict[str, Any]:
             "constellation": row["constellation"],
             "distance": row["distance"],
         },
+        # Only whether one is saved, so the page knows whether to offer the recovery-email prompt.
+        "has_contact_email": bool(row.get("contact_email")),
         "certificate": _public_file_info(row, "certificate"),
         "registry_document": _public_file_info(row, "registry_document"),
     }

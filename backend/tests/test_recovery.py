@@ -445,7 +445,7 @@ def test_contact_email_is_validated_lowercased_and_admin_only(staff, public):
     assert staff.post("/api/admin/registries", json=registry_payload(registry_number="BLANK-001", registry_code="BLANK-CODE", contact_email="  ")).json()["contact_email"] is None
     c = TestClient(staff.app)
     pid = c.post("/api/registries/verify", json={"registry_number": "DEV-2026-000001", "registry_code": "TEST-CODE-1"}).json()["public_id"]
-    assert "owner@example.com" not in c.get(f"/api/registries/{pid}").text and "contact_email" not in c.get(f"/api/registries/{pid}").text
+    assert "owner@example.com" not in c.get(f"/api/registries/{pid}").text and '"contact_email"' not in c.get(f"/api/registries/{pid}").text
 
 
 def test_contact_email_can_be_set_by_batch_and_edit(staff):

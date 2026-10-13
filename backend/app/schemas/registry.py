@@ -127,6 +127,21 @@ def _plain(value: object) -> object:
     return CONTROL_CHARS.sub("", value).strip() if isinstance(value, str) else value
 
 
+class ContactEmailIn(BaseModel):
+    """A verified customer adding the email we may use to help them recover their details."""
+
+    model_config = ConfigDict(extra="forbid")
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        email = normalize_email(v)
+        if not email:
+            raise ValueError("Enter a valid email address.")
+        return email
+
+
 class RecoveryRequestIn(BaseModel):
     """What a customer may submit. Nothing here proves identity; an admin decides by hand."""
 

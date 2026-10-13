@@ -169,7 +169,7 @@ def test_public_responses_never_leak_keys_buckets_or_signed_urls(s3_settings, s3
     page = c.get(f"/api/registries/{pid}")
     text = json.dumps(page.json())
     assert page.json()["certificate"] == {"available": True, "content_type": "application/pdf", "label": "Star Dedication Certificate"}
-    for forbidden in ("certificates/", BUCKET, "X-Amz", "amazonaws", "prod/", "size", "uploaded_at", "contact_email"):
+    for forbidden in ("certificates/", BUCKET, "X-Amz", "amazonaws", "prod/", "size", "uploaded_at", '"contact_email"'):
         assert forbidden not in text, forbidden
 
 

@@ -69,7 +69,7 @@ export default function RegistryList() {
         <div className="field grow">
           <label htmlFor="search">Search</label>
           <input id="search" type="search" value={input} onChange={(e) => setInput(e.target.value)}
-            placeholder="Registry number, code, dedicated to or by" />
+            placeholder="Registry number, code, name or customer email" />
         </div>
         <div className="field">
           <label htmlFor="status-filter">Status</label>

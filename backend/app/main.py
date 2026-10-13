@@ -32,6 +32,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.storage = build_storage(settings)
     app.state.email_sender = build_email_sender(settings)                       # None until SMTP is configured
     app.state.recovery_limiter = RateLimiter(max_attempts=5, window_seconds=60 * 60)  # form submissions / IP
+    app.state.contact_email_limiter = RateLimiter(max_attempts=10, window_seconds=60 * 60)  # recovery-email saves / IP
     app.state.download_limiter = RateLimiter(max_attempts=30, window_seconds=5 * 60)  # document requests / IP
     app.state.verify_limiter = RateLimiter(max_attempts=10, window_seconds=15 * 60)  # failed attempts / IP
     app.state.password_limiter = RateLimiter(max_attempts=5, window_seconds=15 * 60)  # wrong current password

@@ -23,7 +23,11 @@ const FAQS = [
   ['Can I verify my registry from the website?',
     'Yes. Verification is done securely on our servers, and only the registry that matches your Registry Number and Registry Code is shown.'],
   ['How do I get my certificate?',
-    'Once you verify your registry, the Your Documents section lets you download your Star Dedication Certificate and your Certificate of Celestial Registry as PDFs. If one is not there yet, it has not been uploaded; it will appear as soon as it is ready.'],
+    'Once you verify your registry, the Your Documents section lets you view and download your Star Dedication Certificate and your Certificate of Celestial Registry as PDFs. The small Download option beneath each one saves a copy. If one is not there yet, it has not been uploaded; it will appear as soon as it is ready.'],
+  ['Can I save my documents on an iPhone or iPad?',
+    'Yes. Tap View to open the PDF, then tap the Share icon and choose Save to Files. If you opened the website from inside Instagram or another app, open it in Safari or Chrome first, because those apps can block saving files.'],
+  ['Who can ask to edit or transfer a registry?',
+    'In our system, the owner of the email address saved for a registry is the owner of that registry. That person may make requests to Our Forever Star on its behalf, including to edit the registry or transfer it to someone else. It does not matter who the star was dedicated to or who dedicated it: the right belongs to the owner of the email address on file. Before acting on any request we confirm that it comes from that email address, so keep your email address up to date with us.'],
   ['Can I transfer my registry?', 'Transfer Certificate functionality is Coming Soon.'],
   ['Is the Wallet available?', 'The Wallet is Coming Soon.'],
 ]

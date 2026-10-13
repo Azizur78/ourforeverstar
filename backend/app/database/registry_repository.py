@@ -72,6 +72,16 @@ class RegistryRepository:
             raise
         return self.get(registry_id)
 
+    def set_contact_email_if_empty(self, registry_id: int, email: str) -> bool:
+        """Customer-supplied email. Never replaces one that is already saved (that is admin-controlled)."""
+        cur = self.conn.execute(
+            "UPDATE registries SET contact_email = ?, updated_at = ? "
+            "WHERE id = ? AND (contact_email IS NULL OR contact_email = '')",
+            (email, _now(), registry_id),
+        )
+        self.conn.commit()
+        return cur.rowcount == 1
+
     def _one(self, sql: str, params: tuple) -> dict[str, Any] | None:
         row = self.conn.execute(sql, params).fetchone()
         return dict(row) if row else None
@@ -93,7 +103,8 @@ class RegistryRepository:
             like = f"%{_escape_like(q)}%"
             clause = ("(registry_number LIKE ? ESCAPE '\\' OR dedicated_to LIKE ? ESCAPE '\\' "
                       "OR dedicated_by LIKE ? ESCAPE '\\'")
-            params += [like, like, like]
+            clause += " OR contact_email LIKE ? ESCAPE '\\'"
+            params += [like, like, like, like]
             if code_hash:
                 clause += " OR registry_code_hash = ?"
                 params.append(code_hash)

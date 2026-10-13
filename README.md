@@ -248,6 +248,11 @@ pricing page and set a billing alarm.
 
 ## Registry recovery (manual, no OTP, no accounts)
 
+**Collecting a recovery email.** After a customer verifies, a registry with no email on file shows an optional pop-up explaining that the
+email is for recovery; closing it with the cross skips it (for that browser tab). An address they enter is saved as the registry's private
+contact email and is searchable in **Admin > Registries** (the search box matches the email). The pop-up never appears for a registry that
+already has an email, and a customer can only fill an empty slot: they can never replace an address the admin saved.
+
 A customer who lost their details uses **/recover** (also linked from the Verify Registry window and the FAQ): name, email, optional
 registry number and message. Whatever they send, the answer is identical, so nobody can learn whether an email or registry exists.
 Requests are stored, de-duplicated (one open request per email and registry per day, three per email per day) and rate limited per visitor.
@@ -274,7 +279,7 @@ With SES, verify your sending domain first and request production access (new ac
 
 ### Trying it out by hand
 1. **Upload:** Admin > Registries > Add (or Edit). Choose a PDF for each document and save; the list shows Certificate and Registry ticks.
-2. **Download:** open the site, Verify Registry with that number and code, go to Your Documents, and use Download. A document with no upload
+2. **Download:** open the site, Verify Registry with that number and code, go to Your Documents, and use View, or the small Download option beneath it. A document with no upload
    shows "Not uploaded yet".
 3. **Recovery:** on `/recover` submit a request using the email you saved on a registry; in Admin > Recovery open it, Start review, Approve
    (the email matches), then Send registry details by email. Try again with a different email to see that manual verification is required.

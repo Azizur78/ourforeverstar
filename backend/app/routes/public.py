@@ -9,7 +9,7 @@ from ..database.registry_repository import RegistryRepository
 from ..deps import (
     REGISTRY_COOKIE, REGISTRY_PURPOSE, REGISTRY_TTL, client_ip, get_repo, get_settings, get_storage, get_vault,
 )
-from ..schemas.registry import VerifyRequest
+from ..schemas.registry import ContactEmailIn, VerifyRequest
 from ..services.certificates import DocumentStorage
 from ..services.crypto import CodeVault
 from ..services.registry_service import to_public
@@ -80,6 +80,27 @@ def get_registry(
     settings: Settings = Depends(get_settings),
 ):
     return to_public(_active_registry_for(request, public_id, repo, settings), vault)
+
+
+@router.post("/{public_id}/contact-email")
+def save_contact_email(
+    public_id: str,
+    body: ContactEmailIn,
+    request: Request,
+    repo: RegistryRepository = Depends(get_repo),
+    settings: Settings = Depends(get_settings),
+):
+    """A verified customer may add a recovery email once. It can only fill an empty slot, never replace one."""
+    limiter = request.app.state.contact_email_limiter
+    key = client_ip(request)
+    wait = limiter.retry_after(key)
+    if wait:
+        raise HTTPException(429, "Too many attempts. Please try again later.", headers={"Retry-After": str(wait)})
+    limiter.record(key)
+    row = _active_registry_for(request, public_id, repo, settings)
+    if not repo.set_contact_email_if_empty(row["id"], body.email):
+        raise HTTPException(409, "A recovery email is already saved for this registry.")
+    return {"saved": True}
 
 
 @router.get("/{public_id}/registry-document")

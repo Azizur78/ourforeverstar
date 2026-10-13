@@ -40,8 +40,9 @@ def test_the_page_says_which_documents_exist_without_revealing_anything_else(set
     assert page["certificate"] == {"available": True, "content_type": "application/pdf", "label": "Star Dedication Certificate"}
     assert page["registry_document"] == {"available": False, "content_type": None, "label": "Certificate of Celestial Registry"}
     text = json.dumps(page)
-    for forbidden in ("certificates/", ".pdf", "size", "uploaded_at", "contact_email", "certificate_path", "registry_document_path"):
+    for forbidden in ("certificates/", ".pdf", "size", "uploaded_at", "certificate_path", "registry_document_path"):
         assert forbidden not in text, forbidden
+    assert "contact_email" not in page and set(page) >= {"has_contact_email"}
 
 
 def test_a_missing_document_is_a_clear_404_for_each_kind(settings, registry):
