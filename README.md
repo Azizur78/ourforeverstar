@@ -128,11 +128,21 @@ in the admin portal. Real data files are git-ignored. **No real data has been im
 
 ## Future production deployment (not done)
 
-Planned low-cost target: one AWS Lightsail instance, Nginx serving `frontend/dist` and proxying `/api` to
-`uvicorn` (single worker, because the rate limiter is in-process), SQLite on disk. Checklist for that phase:
-`APP_ENV=production`, HTTPS, `TRUST_PROXY=true`, Nginx `client_max_body_size 6m`, a systemd unit for uvicorn, real
-domain in `sitemap.xml` / `robots.txt`, and scheduled backups of `backend/data/` (use `sqlite3 .backup`),
-`backend/uploads/` and the `SECRET_KEY`.
+Planned target: one AWS EC2 instance running this repository's Docker image (single container, single worker, because the
+rate limiter is in-process), with SQLite and the uploaded PDFs on a mounted EBS volume (or PDFs in a private S3 bucket)
+behind a TLS reverse proxy (Caddy or Nginx). The full runbook is in
+[`docs/AWS_DEPLOYMENT_HANDOFF.md`](docs/AWS_DEPLOYMENT_HANDOFF.md): EBS set-up, environment variables, HTTPS, backups and
+restore, and the verification checklist. Key points:
+
+- Set `APP_ENV=production` explicitly (the image does not), keep the existing `SECRET_KEY` and `ADMIN_USERNAME`, set
+  `TRUST_PROXY=true` only behind the proxy, and never set `STAGING_SEED_FILE`, `STAGING_SEED_B64` or `NOINDEX=true`.
+- Request-body limit: single PDFs are capped at `MAX_CERTIFICATE_MB` (5), but the batch endpoint accepts up to 20
+  certificates plus 20 registry documents (about 201 MB). Use a proxy limit of about 210 MB (`client_max_body_size 210m`
+  in Nginx, `request_body { max_size 210MB }` in Caddy). A 6 MB limit breaks batch saves with HTTP 413.
+- Back up SQLite with Python's `sqlite3` backup API (not by copying the file), plus `backend/uploads/` and the `SECRET_KEY`.
+- `scripts/` is not inside the Docker image; run the maintenance scripts from a checkout on the host.
+- `frontend/public/sitemap.xml` and `robots.txt` use the canonical domain `https://ourforeverstar.com` (apex, https). If the
+  canonical host ever changes, update both files and rebuild the image.
 
 ## Render staging (Free plan)
 
